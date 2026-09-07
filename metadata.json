@@ -1,0 +1,7 @@
+{
+  "name": "InterviewGym AI",
+  "description": "Personal AI communication coach, technical learning coach, and realistic interview simulator.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
