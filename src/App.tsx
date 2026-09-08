@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import { Navbar } from './components/Navbar';
 import { DashboardView } from './components/DashboardView';
 import { RandomSpeakingView } from './components/RandomSpeakingView';
@@ -31,9 +32,46 @@ import {
   syncUserDataWithFirestore,
 } from './lib/storage';
 
+const VALID_TABS: NavigationTab[] = [
+  'dashboard',
+  'speaking',
+  'learn',
+  'explain',
+  'interview',
+  'quick',
+  'debate',
+  'current',
+  'progress',
+  'history',
+];
+
+const TAB_TITLES: Record<string, string> = {
+  dashboard: 'Dashboard',
+  speaking: 'Random Speaking',
+  learn: 'Learn a Topic',
+  explain: 'Learn → Explain',
+  interview: 'Interview Simulator',
+  quick: '5-Min Drill',
+  debate: 'Debate Mode',
+  current: 'AI Tools & Model Landscape',
+  progress: 'Progress Analytics',
+  history: 'Session History',
+  profile: 'Settings & Data',
+};
+
+function getInitialTab(): NavigationTab {
+  if (typeof window !== 'undefined' && window.location.hash) {
+    const hash = window.location.hash.replace(/^#/, '') as NavigationTab;
+    if (VALID_TABS.includes(hash)) {
+      return hash;
+    }
+  }
+  return 'dashboard';
+}
+
 function AppContent() {
   const { user, loading, isAuthorized, isGuest } = useAuth();
-  const [activeTab, setActiveTab] = useState<NavigationTab>('dashboard');
+  const [activeTab, setActiveTab] = useState<NavigationTab>(getInitialTab);
   const [profile, setProfile] = useState<UserPerformanceProfile>(getProfile());
   const [dailyPlan, setDailyPlan] = useState<DailyPlan | null>(getDailyPlan());
   const [speakingSessions, setSpeakingSessions] = useState<SpeakingSessionRecord[]>([]);
@@ -45,6 +83,43 @@ function AppContent() {
   const [explainDomain, setExplainDomain] = useState<string>('CS Fundamentals');
   const [interviewTrack, setInterviewTrack] = useState<string>('AI/ML');
   const [interviewTopic, setInterviewTopic] = useState<string>('');
+
+  // Handle browser history (popstate) so Back button navigates between sections instead of exiting the app
+  useEffect(() => {
+    const currentHash = window.location.hash.replace(/^#/, '') as NavigationTab;
+    const initial = VALID_TABS.includes(currentHash) ? currentHash : 'dashboard';
+    window.history.replaceState({ tab: initial }, '', `#${initial}`);
+
+    const handlePopState = (event: PopStateEvent) => {
+      let targetTab: NavigationTab = 'dashboard';
+      if (event.state && event.state.tab && (VALID_TABS.includes(event.state.tab) || event.state.tab === 'profile')) {
+        targetTab = event.state.tab;
+      } else {
+        const hash = window.location.hash.replace(/^#/, '') as NavigationTab;
+        if (VALID_TABS.includes(hash) || (hash as string) === 'profile') {
+          targetTab = hash;
+        }
+      }
+
+      setActiveTab(targetTab);
+
+      if (event.state?.params) {
+        if (targetTab === 'explain' && event.state.params.topic) {
+          setExplainTopic(event.state.params.topic);
+          if (event.state.params.domain) setExplainDomain(event.state.params.domain);
+        }
+        if (targetTab === 'interview') {
+          if (event.state.params.track) setInterviewTrack(event.state.params.track);
+          if (event.state.params.topic) setInterviewTopic(event.state.params.topic);
+        }
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Load user data when authenticated or tab changes
   useEffect(() => {
@@ -72,6 +147,12 @@ function AppContent() {
       if (params?.track) setInterviewTrack(params.track);
       if (params?.topic) setInterviewTopic(params.topic);
     }
+
+    // Push new entry into browser history so browser Back navigates within the app
+    if (tab !== activeTab) {
+      window.history.pushState({ tab, params }, '', `#${tab}`);
+    }
+
     setActiveTab(tab);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -104,7 +185,24 @@ function AppContent() {
       />
 
       {/* Main Viewport Container */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-6">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6">
+        {/* Mobile Return to Dashboard Quick Bar (shown on all non-dashboard sections) */}
+        {activeTab !== 'dashboard' && (
+          <div className="md:hidden mb-4 flex items-center justify-between p-2.5 px-3 rounded-xl bg-stone-900 border border-stone-800 shadow-sm">
+            <button
+              onClick={() => handleNavigate('dashboard')}
+              id="mobile-return-to-dashboard-btn"
+              className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300 active:scale-95 transition-all"
+            >
+              <ArrowLeft className="w-4 h-4 shrink-0" />
+              <span>Back to Dashboard</span>
+            </button>
+            <span className="text-[11px] text-stone-400 font-medium truncate max-w-[150px]">
+              {TAB_TITLES[activeTab] || 'Section'}
+            </span>
+          </div>
+        )}
+
         {activeTab === 'dashboard' && (
           <DashboardView
             profile={profile}

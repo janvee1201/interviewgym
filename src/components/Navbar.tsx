@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Mic,
   Brain,
@@ -40,6 +40,25 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
+  // Prevent background body scrolling when mobile navigation drawer is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          setIsMobileMenuOpen(false);
+        }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = '';
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    } else {
+      document.body.style.overflow = '';
+    }
+  }, [isMobileMenuOpen]);
+
   const navItems: { id: NavigationTab; label: string; icon: React.ComponentType<{ className?: string }>; desc?: string }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: Sparkles, desc: 'Mastery overview & daily training' },
     { id: 'speaking', label: 'Random Speaking', icon: Mic, desc: '1–3 min impromptu speaking drills' },
@@ -59,40 +78,44 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-stone-900/95 backdrop-blur-md border-b border-stone-800 text-stone-100">
+    <header className="sticky top-0 z-40 bg-stone-900 border-b border-stone-800 text-stone-100 shadow-sm">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-2">
-          {/* Mobile Hamburger Button */}
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 rounded-xl text-stone-400 hover:text-white hover:bg-stone-800 transition-colors"
-            aria-label="Toggle navigation menu"
-            id="mobile-nav-toggle-btn"
-          >
-            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
+          {/* Left section: Hamburger button (mobile) + Brand Logo */}
+          <div className="flex items-center gap-2 min-w-0">
+            {/* Mobile Hamburger Button (☰) */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden p-2 rounded-xl text-stone-300 hover:text-white bg-stone-800/90 hover:bg-stone-800 border border-stone-700/60 transition-colors flex items-center justify-center shrink-0 min-w-[42px] min-h-[42px]"
+              aria-label="Toggle navigation menu"
+              aria-expanded={isMobileMenuOpen}
+              id="mobile-nav-toggle-btn"
+            >
+              {isMobileMenuOpen ? <X className="w-5 h-5 text-emerald-400" /> : <Menu className="w-5 h-5 text-emerald-400" />}
+            </button>
 
-          {/* Logo & Tagline */}
-          <div
-            className="flex items-center gap-2.5 cursor-pointer group min-w-0"
-            onClick={() => handleSelect('dashboard')}
-            id="nav-brand-btn"
-          >
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-stone-950 font-extrabold text-base sm:text-lg shadow-md group-hover:scale-105 transition-transform shrink-0">
-              IG
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="font-bold text-base sm:text-lg tracking-tight text-white font-['Plus_Jakarta_Sans'] truncate">
-                  InterviewGym<span className="text-emerald-400">AI</span>
-                </span>
-                <span className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider bg-emerald-950 text-emerald-300 border border-emerald-800/60 px-1.5 py-0.5 rounded hidden xs:inline">
-                  Personal
-                </span>
+            {/* Logo & Brand */}
+            <div
+              className="flex items-center gap-2 cursor-pointer group min-w-0"
+              onClick={() => handleSelect('dashboard')}
+              id="nav-brand-btn"
+            >
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-stone-950 font-extrabold text-base sm:text-lg shadow-md group-hover:scale-105 transition-transform shrink-0">
+                IG
               </div>
-              <p className="text-[11px] text-stone-400 hidden sm:block truncate">
-                Learn. Speak. Explain. Interview. Improve.
-              </p>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <span className="font-bold text-base sm:text-lg tracking-tight text-white font-['Plus_Jakarta_Sans'] truncate">
+                    InterviewGym<span className="text-emerald-400">AI</span>
+                  </span>
+                  <span className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider bg-emerald-950 text-emerald-300 border border-emerald-800/60 px-1.5 py-0.5 rounded hidden xs:inline">
+                    Personal
+                  </span>
+                </div>
+                <p className="text-[11px] text-stone-400 hidden sm:block truncate">
+                  Learn. Speak. Explain. Interview. Improve.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -103,7 +126,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* Streak Badge */}
             <div
-              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-amber-950/40 border border-amber-800/50 text-amber-300 text-xs font-semibold"
+              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-amber-950/40 border border-amber-800/50 text-amber-300 text-xs font-semibold shrink-0"
               title="Consecutive practice streak"
               id="header-streak-badge"
             >
@@ -111,7 +134,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>{streakDays} <span className="hidden sm:inline">Day Streak</span><span className="sm:hidden">d</span></span>
             </div>
 
-            {/* Audio Voice Test */}
+            {/* Audio Voice Test (hidden on mobile to prevent overflow) */}
             <button
               onClick={() => {
                 if ('speechSynthesis' in window) {
@@ -119,7 +142,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   window.speechSynthesis.speak(u);
                 }
               }}
-              className="p-1.5 sm:p-2 rounded-lg text-stone-400 hover:text-stone-200 hover:bg-stone-800 transition-colors hidden xs:flex"
+              className="p-1.5 sm:p-2 rounded-lg text-stone-400 hover:text-stone-200 hover:bg-stone-800 transition-colors hidden sm:flex"
               title="Test Coach Voice"
               id="header-test-audio-btn"
             >
@@ -215,59 +238,141 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Mobile Navigation Drawer */}
+      {/* Mobile Navigation Backdrop & Drawer */}
       {isMobileMenuOpen && (
-        <div className="md:hidden fixed inset-x-0 top-16 bottom-0 bg-stone-950/95 backdrop-blur-xl border-t border-stone-800 z-50 overflow-y-auto p-4 space-y-2">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-stone-500 px-3 py-1">
-            Navigation Hub
-          </div>
-          <div className="grid grid-cols-1 gap-1.5">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => handleSelect(item.id)}
-                  className={`w-full flex items-center justify-between p-3 rounded-xl text-left transition-all ${
-                    isActive
-                      ? 'bg-emerald-500 text-stone-950 font-bold'
-                      : 'bg-stone-900/60 text-stone-200 hover:bg-stone-850 border border-stone-800/80'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${isActive ? 'bg-emerald-600 text-stone-950' : 'bg-stone-800 text-emerald-400'}`}>
-                      <Icon className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold">{item.label}</div>
-                      {item.desc && (
-                        <div className={`text-[11px] ${isActive ? 'text-stone-900/80' : 'text-stone-400'}`}>
-                          {item.desc}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+        <>
+          {/* Clickable Backdrop Overlay */}
+          <div
+            className="md:hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm"
+            onClick={() => setIsMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
 
-          {user && (
-            <div className="pt-4 mt-4 border-t border-stone-800">
-              <button
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  signOutUser();
-                }}
-                className="w-full py-3 px-4 rounded-xl bg-rose-950/60 border border-rose-800 text-rose-300 font-bold text-xs flex items-center justify-center gap-2"
+          {/* Slide-out Navigation Drawer */}
+          <div
+            className="md:hidden fixed inset-y-0 left-0 z-50 w-[85%] max-w-sm bg-stone-950 border-r border-stone-800 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-left duration-200"
+            id="mobile-navigation-drawer"
+          >
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between p-4 border-b border-stone-800 bg-stone-900/90 shrink-0">
+              <div
+                className="flex items-center gap-2.5 cursor-pointer"
+                onClick={() => handleSelect('dashboard')}
               >
-                <LogOut className="w-4 h-4 text-rose-400" />
-                <span>Sign Out ({user.email})</span>
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-stone-950 font-extrabold text-sm shadow-md">
+                  IG
+                </div>
+                <div>
+                  <span className="font-bold text-sm tracking-tight text-white font-['Plus_Jakarta_Sans']">
+                    InterviewGym<span className="text-emerald-400">AI</span>
+                  </span>
+                  <p className="text-[10px] text-stone-400">Mastery Navigation</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-2 rounded-xl text-stone-400 hover:text-white hover:bg-stone-800 transition-colors"
+                aria-label="Close menu"
+                id="btn-close-mobile-menu"
+              >
+                <X className="w-5 h-5" />
               </button>
             </div>
-          )}
-        </div>
+
+            {/* Scrollable Navigation Items */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-1.5 overscroll-contain">
+              <div className="px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-stone-500">
+                All Sections
+              </div>
+
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleSelect(item.id)}
+                    id={`mobile-nav-item-${item.id}`}
+                    className={`w-full flex items-center justify-between p-3 rounded-xl text-left transition-all ${
+                      isActive
+                        ? 'bg-emerald-500 text-stone-950 font-bold shadow-md shadow-emerald-950'
+                        : 'bg-stone-900/60 text-stone-200 hover:bg-stone-850 hover:text-white border border-stone-800/80'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
+                        className={`p-2 rounded-lg shrink-0 ${
+                          isActive ? 'bg-emerald-600 text-stone-950' : 'bg-stone-800 text-emerald-400'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold truncate">{item.label}</div>
+                        {item.desc && (
+                          <div
+                            className={`text-[11px] truncate ${
+                              isActive ? 'text-stone-900/90' : 'text-stone-400'
+                            }`}
+                          >
+                            {item.desc}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {isActive && (
+                      <span className="w-2 h-2 rounded-full bg-stone-950 shrink-0 ml-2" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Drawer Footer with Streak, Settings & Account */}
+            <div className="p-3 border-t border-stone-800 bg-stone-900/80 shrink-0 space-y-2">
+              <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-stone-950 border border-stone-800/80 text-xs">
+                <div className="flex items-center gap-2 text-amber-300 font-semibold">
+                  <Flame className="w-4 h-4 text-amber-400 animate-pulse" />
+                  <span>{streakDays} Day Practice Streak</span>
+                </div>
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    onOpenSettings();
+                  }}
+                  className="text-stone-400 hover:text-white p-1 rounded-lg hover:bg-stone-800"
+                  title="Settings & Data"
+                  id="mobile-drawer-settings-btn"
+                >
+                  <Settings className="w-4 h-4" />
+                </button>
+              </div>
+
+              {user && (
+                <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-stone-950 border border-stone-800/80 text-xs">
+                  <div className="min-w-0 pr-2">
+                    <p className="text-stone-200 font-medium truncate text-[11px]">
+                      {user.displayName || user.email}
+                    </p>
+                    <p className="text-stone-500 truncate text-[10px]">Authorized User</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      signOutUser();
+                    }}
+                    id="mobile-drawer-signout-btn"
+                    className="text-rose-400 hover:text-rose-300 text-[11px] font-bold px-2 py-1 rounded bg-rose-950/40 border border-rose-900/60 shrink-0 flex items-center gap-1"
+                  >
+                    <LogOut className="w-3 h-3" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
       )}
     </header>
   );
