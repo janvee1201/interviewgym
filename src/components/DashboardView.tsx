@@ -103,31 +103,55 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </p>
 
           {/* Quick Stats Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-stone-800/80">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-6 pt-6 border-t border-stone-800/80">
             <div>
-              <p className="text-xs text-stone-400 uppercase tracking-wider">Streak</p>
-              <p className="text-2xl font-bold text-amber-400 mt-0.5">{profile.streakDays} Days</p>
+              <p className="text-[11px] sm:text-xs text-stone-400 uppercase tracking-wider">Streak</p>
+              <p className="text-xl sm:text-2xl font-bold text-amber-400 mt-0.5">
+                {profile.streakDays > 0 ? `${profile.streakDays} Days` : '0 Days'}
+              </p>
             </div>
             <div>
-              <p className="text-xs text-stone-400 uppercase tracking-wider">Sessions</p>
-              <p className="text-2xl font-bold text-white mt-0.5">{profile.totalSessionsCompleted}</p>
+              <p className="text-[11px] sm:text-xs text-stone-400 uppercase tracking-wider">Sessions</p>
+              <p className="text-xl sm:text-2xl font-bold text-white mt-0.5">{profile.totalSessionsCompleted}</p>
             </div>
             <div>
-              <p className="text-xs text-stone-400 uppercase tracking-wider">Speaking Time</p>
-              <p className="text-2xl font-bold text-teal-400 mt-0.5">{profile.totalSpeakingMinutes} min</p>
+              <p className="text-[11px] sm:text-xs text-stone-400 uppercase tracking-wider">Speaking Time</p>
+              <p className="text-xl sm:text-2xl font-bold text-teal-400 mt-0.5">{profile.totalSpeakingMinutes} min</p>
             </div>
             <div>
-              <p className="text-xs text-stone-400 uppercase tracking-wider">Average Score</p>
-              <p className="text-2xl font-bold text-emerald-400 mt-0.5">
-                {Math.round(
-                  skillMetrics.reduce((acc, s) => acc + s.value, 0) / skillMetrics.length
-                )}
-                /100
+              <p className="text-[11px] sm:text-xs text-stone-400 uppercase tracking-wider">Average Score</p>
+              <p className="text-xl sm:text-2xl font-bold text-emerald-400 mt-0.5">
+                {profile.totalSessionsCompleted > 0
+                  ? `${Math.round(skillMetrics.reduce((acc, s) => acc + s.value, 0) / skillMetrics.length)}/100`
+                  : '—'}
               </p>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Brand-new User Empty State Alert */}
+      {profile.totalSessionsCompleted === 0 && (
+        <div className="rounded-2xl bg-stone-900 border border-emerald-800/50 p-5 sm:p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider">
+              <Sparkles className="w-4 h-4" />
+              <span>Personal Workspace Initialized</span>
+            </div>
+            <h2 className="text-lg font-bold text-white">Start your first session to build your progress.</h2>
+            <p className="text-xs text-stone-400 max-w-xl leading-relaxed">
+              Your personal dashboard will analyze real-time speech fluency, technical accuracy, and filler word counts once you finish a speaking drill or mock interview.
+            </p>
+          </div>
+          <button
+            onClick={() => onNavigate('speaking')}
+            className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-bold text-xs shrink-0 flex items-center justify-center gap-2 transition-transform hover:scale-105 shadow-md shadow-emerald-950"
+          >
+            <Mic className="w-4 h-4" />
+            <span>Start Practice Drill</span>
+          </button>
+        </div>
+      )}
 
       {/* Weakest Area Alert & Spaced Repetition Active Recall */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -140,21 +164,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <span>Weakest Skill Identified</span>
               </div>
               <span className="text-xs bg-amber-950/80 text-amber-300 px-2 py-0.5 rounded border border-amber-800/50">
-                {profile.weakestSkill}
+                {profile.totalSessionsCompleted > 0 ? profile.weakestSkill : 'Not enough data yet'}
               </span>
             </div>
             <p className="text-stone-300 text-sm leading-relaxed">
-              {profile.recommendedPractice}
+              {profile.totalSessionsCompleted > 0
+                ? profile.recommendedPractice
+                : 'Complete your first practice session to diagnose communication strengths and weaknesses.'}
             </p>
           </div>
           <div className="pt-4 mt-4 border-t border-stone-800/80 flex items-center justify-between">
-            <span className="text-xs text-stone-400">Current Mastery: {profile.confidenceUnderPressure}%</span>
+            <span className="text-xs text-stone-400">
+              {profile.totalSessionsCompleted > 0
+                ? `Current Mastery: ${profile.confidenceUnderPressure}%`
+                : 'Pending first evaluation'}
+            </span>
             <button
               onClick={handlePracticeWeakness}
               id="dashboard-practice-weakness-btn"
               className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-stone-950 text-xs font-bold transition-colors"
             >
-              <span>Practice this now</span>
+              <span>{profile.totalSessionsCompleted > 0 ? 'Practice this now' : 'Start First Session'}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>

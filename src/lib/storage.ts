@@ -5,6 +5,18 @@ import {
   InterviewSession,
   DailyPlan,
 } from '../types';
+import { auth } from './firebase';
+import {
+  persistUserProfile,
+  persistSpeakingSession,
+  persistExplainSession,
+  persistInterviewSession,
+  fetchUserProfile,
+  fetchSpeakingSessions,
+  fetchExplainSessions,
+  fetchInterviewSessions,
+  EMPTY_USER_PROFILE,
+} from './firestoreStorage';
 
 const PROFILE_KEY = 'interviewgym_user_profile_v1';
 const SPEAKING_SESSIONS_KEY = 'interviewgym_speaking_sessions_v1';
@@ -13,54 +25,60 @@ const INTERVIEW_SESSIONS_KEY = 'interviewgym_interview_sessions_v1';
 const DAILY_PLAN_KEY = 'interviewgym_daily_plan_v1';
 
 export const DEFAULT_PROFILE: UserPerformanceProfile = {
-  speakingFluency: 72,
-  englishGrammar: 76,
-  vocabulary: 70,
-  pronunciationClarity: 74,
-  answerStructure: 71,
-  technicalKnowledge: 78,
-  technicalExplanation: 68,
-  interviewPerformance: 73,
-  confidenceUnderPressure: 64,
-  hrBehavioral: 75,
+  speakingFluency: 0,
+  englishGrammar: 0,
+  vocabulary: 0,
+  pronunciationClarity: 0,
+  answerStructure: 0,
+  technicalKnowledge: 0,
+  technicalExplanation: 0,
+  interviewPerformance: 0,
+  confidenceUnderPressure: 0,
+  hrBehavioral: 0,
 
-  streakDays: 4,
-  lastActiveDate: new Date().toISOString().slice(0, 10),
-  totalSessionsCompleted: 12,
-  totalSpeakingMinutes: 48,
+  streakDays: 0,
+  lastActiveDate: '',
+  totalSessionsCompleted: 0,
+  totalSpeakingMinutes: 0,
 
-  weakestSkill: 'Confidence Under Pressure',
-  strongestSkill: 'Technical Knowledge',
-  recommendedPractice: 'Practice answering follow-up questions under time pressure in Interview or Random Speaking mode.',
+  weakestSkill: 'Not enough data yet',
+  strongestSkill: 'Not enough data yet',
+  recommendedPractice: 'Start your first session to build your progress.',
 
-  fillerWordsHistory: [
-    { sessionDate: 'Day 1', count: 24 },
-    { sessionDate: 'Day 2', count: 19 },
-    { sessionDate: 'Day 3', count: 15 },
-    { sessionDate: 'Day 4', count: 11 },
-    { sessionDate: 'Day 5', count: 8 },
-  ],
-  scoresHistory: [
-    { sessionDate: 'Sep 1', overall: 68, type: 'Speaking' },
-    { sessionDate: 'Sep 2', overall: 72, type: 'Explain' },
-    { sessionDate: 'Sep 3', overall: 70, type: 'Interview' },
-    { sessionDate: 'Sep 4', overall: 76, type: 'Speaking' },
-    { sessionDate: 'Sep 5', overall: 79, type: 'Explain' },
-  ],
-
-  learnedTopics: [
-    { topic: 'Database Indexing (B-Trees vs Hash)', domain: 'CS Fundamentals', learnedAt: Date.now() - 86400000 * 2, masteryScore: 78 },
-    { topic: 'Self-Attention & Transformers', domain: 'AI/ML', learnedAt: Date.now() - 86400000 * 4, masteryScore: 65 },
-    { topic: 'Binary Search O(log n)', domain: 'DSA', learnedAt: Date.now() - 86400000 * 5, masteryScore: 84 },
-  ],
-  weakTopics: ['Self-Attention & Transformers', 'DBMS Concurrency Control', 'RAG vs Fine-tuning tradeoffs'],
+  fillerWordsHistory: [],
+  scoresHistory: [],
+  learnedTopics: [],
+  weakTopics: [],
 };
+
+/**
+ * Sync all user data from Firestore into local cache
+ */
+export async function syncUserDataWithFirestore(userId: string): Promise<UserPerformanceProfile> {
+  if (!userId) return getProfile();
+
+  try {
+    const cloudProfile = await fetchUserProfile(userId);
+    const cloudSpeaking = await fetchSpeakingSessions(userId);
+    const cloudExplain = await fetchExplainSessions(userId);
+    const cloudInterview = await fetchInterviewSessions(userId);
+
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(cloudProfile));
+    localStorage.setItem(SPEAKING_SESSIONS_KEY, JSON.stringify(cloudSpeaking));
+    localStorage.setItem(EXPLAIN_SESSIONS_KEY, JSON.stringify(cloudExplain));
+    localStorage.setItem(INTERVIEW_SESSIONS_KEY, JSON.stringify(cloudInterview));
+
+    return cloudProfile;
+  } catch (err) {
+    console.warn('Error synchronizing with Firestore:', err);
+    return getProfile();
+  }
+}
 
 export function getProfile(): UserPerformanceProfile {
   try {
     const raw = localStorage.getItem(PROFILE_KEY);
     if (!raw) {
-      saveProfile(DEFAULT_PROFILE);
       return DEFAULT_PROFILE;
     }
     const parsed = JSON.parse(raw);
@@ -73,6 +91,11 @@ export function getProfile(): UserPerformanceProfile {
 export function saveProfile(profile: UserPerformanceProfile): void {
   try {
     localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    if (auth.currentUser?.uid) {
+      persistUserProfile(auth.currentUser.uid, profile).catch((err) =>
+        console.warn('Cloud profile sync warning:', err)
+      );
+    }
   } catch (err) {
     console.error('Failed to save profile', err);
   }
@@ -81,20 +104,24 @@ export function saveProfile(profile: UserPerformanceProfile): void {
 export function updateStreak(): UserPerformanceProfile {
   const profile = getProfile();
   const today = new Date().toISOString().slice(0, 10);
-  
+
   if (profile.lastActiveDate === today) {
     return profile;
   }
 
-  const lastDate = new Date(profile.lastActiveDate);
-  const currentDate = new Date(today);
-  const diffDays = Math.round((currentDate.getTime() - lastDate.getTime()) / (1000 * 3600 * 24));
-
   let newStreak = profile.streakDays;
-  if (diffDays === 1) {
-    newStreak += 1;
-  } else if (diffDays > 1) {
+  if (!profile.lastActiveDate) {
     newStreak = 1;
+  } else {
+    const lastDate = new Date(profile.lastActiveDate);
+    const currentDate = new Date(today);
+    const diffDays = Math.round((currentDate.getTime() - lastDate.getTime()) / (1000 * 3600 * 24));
+
+    if (diffDays === 1) {
+      newStreak += 1;
+    } else if (diffDays > 1) {
+      newStreak = 1;
+    }
   }
 
   const updated: UserPerformanceProfile = {
@@ -110,31 +137,48 @@ export function recordSpeakingSession(record: SpeakingSessionRecord): void {
   try {
     const sessions = getSpeakingSessions();
     sessions.unshift(record);
-    localStorage.setItem(SPEAKING_SESSIONS_KEY, JSON.stringify(sessions.slice(0, 50)));
+    localStorage.setItem(SPEAKING_SESSIONS_KEY, JSON.stringify(sessions.slice(0, 100)));
 
     // update profile stats
     const profile = getProfile();
     const newTotal = profile.totalSessionsCompleted + 1;
     const newSpeakingMins = profile.totalSpeakingMinutes + Math.ceil(record.actualDurationSeconds / 60);
 
-    // Exponential moving average for metrics
+    const isFirst = profile.totalSessionsCompleted === 0;
     const alpha = 0.25;
-    const newFluency = Math.round(profile.speakingFluency * (1 - alpha) + record.evaluation.fluency * alpha);
-    const newGrammar = Math.round(profile.englishGrammar * (1 - alpha) + record.evaluation.grammar * alpha);
-    const newVocab = Math.round(profile.vocabulary * (1 - alpha) + record.evaluation.vocabulary * alpha);
-    const newStructure = Math.round(profile.answerStructure * (1 - alpha) + record.evaluation.structure * alpha);
-    const newConfidence = Math.round(profile.confidenceUnderPressure * (1 - alpha) + (record.evaluation.confidence || 70) * alpha);
 
-    const fillerHistory = [...profile.fillerWordsHistory, {
-      sessionDate: `Session ${newTotal}`,
-      count: record.evaluation.fillerWordsCount,
-    }].slice(-10);
+    const newFluency = isFirst
+      ? record.evaluation.fluency
+      : Math.round(profile.speakingFluency * (1 - alpha) + record.evaluation.fluency * alpha);
+    const newGrammar = isFirst
+      ? record.evaluation.grammar
+      : Math.round(profile.englishGrammar * (1 - alpha) + record.evaluation.grammar * alpha);
+    const newVocab = isFirst
+      ? record.evaluation.vocabulary
+      : Math.round(profile.vocabulary * (1 - alpha) + record.evaluation.vocabulary * alpha);
+    const newStructure = isFirst
+      ? record.evaluation.structure
+      : Math.round(profile.answerStructure * (1 - alpha) + record.evaluation.structure * alpha);
+    const newConfidence = isFirst
+      ? (record.evaluation.confidence || 70)
+      : Math.round(profile.confidenceUnderPressure * (1 - alpha) + (record.evaluation.confidence || 70) * alpha);
 
-    const scoresHistory = [...profile.scoresHistory, {
-      sessionDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      overall: record.evaluation.overallScore,
-      type: 'Speaking',
-    }].slice(-12);
+    const fillerHistory = [
+      ...(profile.fillerWordsHistory || []),
+      {
+        sessionDate: `Session ${newTotal}`,
+        count: record.evaluation.fillerWordsCount,
+      },
+    ].slice(-12);
+
+    const scoresHistory = [
+      ...(profile.scoresHistory || []),
+      {
+        sessionDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        overall: record.evaluation.overallScore,
+        type: 'Speaking',
+      },
+    ].slice(-15);
 
     // Compute weakest and strongest
     const skillsMap: Record<string, number> = {
@@ -143,15 +187,11 @@ export function recordSpeakingSession(record: SpeakingSessionRecord): void {
       'Vocabulary': newVocab,
       'Answer Structure': newStructure,
       'Confidence Under Pressure': newConfidence,
-      'Technical Knowledge': profile.technicalKnowledge,
-      'Technical Explanation': profile.technicalExplanation,
-      'Interview Performance': profile.interviewPerformance,
-      'HR/Behavioral': profile.hrBehavioral,
     };
 
-    let weakestSkill = 'Confidence Under Pressure';
+    let weakestSkill = 'Speaking Fluency';
     let weakestScore = 100;
-    let strongestSkill = 'Technical Knowledge';
+    let strongestSkill = 'Speaking Fluency';
     let strongestScore = 0;
 
     Object.entries(skillsMap).forEach(([name, val]) => {
@@ -182,6 +222,13 @@ export function recordSpeakingSession(record: SpeakingSessionRecord): void {
     };
 
     saveProfile(updatedProfile);
+
+    // Cloud persistence
+    if (auth.currentUser?.uid) {
+      persistSpeakingSession(auth.currentUser.uid, record, profile).catch((err) =>
+        console.warn('Cloud speaking session sync warning:', err)
+      );
+    }
   } catch (err) {
     console.error('Failed to record speaking session', err);
   }
@@ -191,16 +238,21 @@ export function recordExplainSession(record: ExplainSessionRecord): void {
   try {
     const sessions = getExplainSessions();
     sessions.unshift(record);
-    localStorage.setItem(EXPLAIN_SESSIONS_KEY, JSON.stringify(sessions.slice(0, 50)));
+    localStorage.setItem(EXPLAIN_SESSIONS_KEY, JSON.stringify(sessions.slice(0, 100)));
 
     const profile = getProfile();
+    const isFirst = profile.totalSessionsCompleted === 0;
     const alpha = 0.25;
-    const newTechExpl = Math.round(profile.technicalExplanation * (1 - alpha) + record.evaluation.technicalCorrectness * alpha);
-    const newStructure = Math.round(profile.answerStructure * (1 - alpha) + record.evaluation.logicalStructure * alpha);
+    const newTechExpl = isFirst
+      ? record.evaluation.technicalCorrectness
+      : Math.round(profile.technicalExplanation * (1 - alpha) + record.evaluation.technicalCorrectness * alpha);
+    const newStructure = isFirst
+      ? record.evaluation.logicalStructure
+      : Math.round(profile.answerStructure * (1 - alpha) + record.evaluation.logicalStructure * alpha);
 
     // Update learned topic mastery
-    const learnedTopics = [...profile.learnedTopics];
-    const existingIdx = learnedTopics.findIndex(t => t.topic.toLowerCase() === record.topic.toLowerCase());
+    const learnedTopics = [...(profile.learnedTopics || [])];
+    const existingIdx = learnedTopics.findIndex((t) => t.topic.toLowerCase() === record.topic.toLowerCase());
     if (existingIdx >= 0) {
       learnedTopics[existingIdx].masteryScore = record.evaluation.overallScore;
     } else {
@@ -213,11 +265,11 @@ export function recordExplainSession(record: ExplainSessionRecord): void {
     }
 
     // If score was below 70, add to weak topics, else remove
-    let weakTopics = [...profile.weakTopics];
+    let weakTopics = [...(profile.weakTopics || [])];
     if (record.evaluation.overallScore < 70) {
       if (!weakTopics.includes(record.topic)) weakTopics.push(record.topic);
     } else {
-      weakTopics = weakTopics.filter(t => t.toLowerCase() !== record.topic.toLowerCase());
+      weakTopics = weakTopics.filter((t) => t.toLowerCase() !== record.topic.toLowerCase());
     }
 
     const updatedProfile: UserPerformanceProfile = {
@@ -228,15 +280,25 @@ export function recordExplainSession(record: ExplainSessionRecord): void {
       answerStructure: newStructure,
       learnedTopics,
       weakTopics,
-      scoresHistory: [...profile.scoresHistory, {
-        sessionDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        overall: record.evaluation.overallScore,
-        type: 'Explain',
-      }].slice(-12),
+      scoresHistory: [
+        ...(profile.scoresHistory || []),
+        {
+          sessionDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          overall: record.evaluation.overallScore,
+          type: 'Explain',
+        },
+      ].slice(-15),
       lastActiveDate: new Date().toISOString().slice(0, 10),
     };
 
     saveProfile(updatedProfile);
+
+    // Cloud persistence
+    if (auth.currentUser?.uid) {
+      persistExplainSession(auth.currentUser.uid, record, profile).catch((err) =>
+        console.warn('Cloud explain session sync warning:', err)
+      );
+    }
   } catch (err) {
     console.error('Failed to record explain session', err);
   }
@@ -245,35 +307,56 @@ export function recordExplainSession(record: ExplainSessionRecord): void {
 export function recordInterviewSession(session: InterviewSession): void {
   try {
     const sessions = getInterviewSessions();
-    const existingIdx = sessions.findIndex(s => s.id === session.id);
+    const existingIdx = sessions.findIndex((s) => s.id === session.id);
     if (existingIdx >= 0) {
       sessions[existingIdx] = session;
     } else {
       sessions.unshift(session);
     }
-    localStorage.setItem(INTERVIEW_SESSIONS_KEY, JSON.stringify(sessions.slice(0, 50)));
+    localStorage.setItem(INTERVIEW_SESSIONS_KEY, JSON.stringify(sessions.slice(0, 100)));
 
     if (session.scorecard) {
       const profile = getProfile();
+      const isFirst = profile.totalSessionsCompleted === 0;
       const alpha = 0.25;
       const card = session.scorecard;
       const updatedProfile: UserPerformanceProfile = {
         ...profile,
         totalSessionsCompleted: profile.totalSessionsCompleted + 1,
         totalSpeakingMinutes: profile.totalSpeakingMinutes + session.durationMinutes,
-        technicalKnowledge: Math.round(profile.technicalKnowledge * (1 - alpha) + card.technicalKnowledge * alpha),
-        interviewPerformance: Math.round(profile.interviewPerformance * (1 - alpha) + card.overallScore * alpha),
-        confidenceUnderPressure: Math.round(profile.confidenceUnderPressure * (1 - alpha) + card.pressureHandling * alpha),
-        hrBehavioral: Math.round(profile.hrBehavioral * (1 - alpha) + card.hrBehavioral * alpha),
-        speakingFluency: Math.round(profile.speakingFluency * (1 - alpha) + card.communication * alpha),
-        scoresHistory: [...profile.scoresHistory, {
-          sessionDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          overall: card.overallScore,
-          type: 'Interview',
-        }].slice(-12),
+        technicalKnowledge: isFirst
+          ? card.technicalKnowledge
+          : Math.round(profile.technicalKnowledge * (1 - alpha) + card.technicalKnowledge * alpha),
+        interviewPerformance: isFirst
+          ? card.overallScore
+          : Math.round(profile.interviewPerformance * (1 - alpha) + card.overallScore * alpha),
+        confidenceUnderPressure: isFirst
+          ? card.pressureHandling
+          : Math.round(profile.confidenceUnderPressure * (1 - alpha) + card.pressureHandling * alpha),
+        hrBehavioral: isFirst
+          ? card.hrBehavioral
+          : Math.round(profile.hrBehavioral * (1 - alpha) + card.hrBehavioral * alpha),
+        speakingFluency: isFirst
+          ? card.communication
+          : Math.round(profile.speakingFluency * (1 - alpha) + card.communication * alpha),
+        scoresHistory: [
+          ...(profile.scoresHistory || []),
+          {
+            sessionDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            overall: card.overallScore,
+            type: 'Interview',
+          },
+        ].slice(-15),
         lastActiveDate: new Date().toISOString().slice(0, 10),
       };
       saveProfile(updatedProfile);
+
+      // Cloud persistence
+      if (auth.currentUser?.uid) {
+        persistInterviewSession(auth.currentUser.uid, session, profile).catch((err) =>
+          console.warn('Cloud interview session sync warning:', err)
+        );
+      }
     }
   } catch (err) {
     console.error('Failed to record interview session', err);

@@ -84,28 +84,33 @@ export class VoiceRecognizer {
     this.transcript = '';
     this.isListening = true;
 
-    // 1. Request microphone access for audio visualizer
+    // 1. Request microphone access for audio visualizer (graceful fallback if blocked)
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         this.setupAudioAnalysis(this.mediaStream);
       }
     } catch (err: any) {
-      this.isListening = false;
-      const msg = err.name === 'NotAllowedError'
-        ? 'Microphone permission was denied. Please allow microphone access in your browser.'
-        : 'Could not access microphone hardware.';
-      this.onError?.(msg);
-      return false;
+      console.warn('Microphone audio visualizer stream error:', err);
+      if (err.name === 'NotAllowedError') {
+        this.onError?.('Microphone permission was denied. Please allow microphone access in your browser settings.');
+      }
+      // If recognition is not available either, stop here
+      if (!this.recognition) {
+        this.isListening = false;
+        return false;
+      }
     }
 
     // 2. Start SpeechRecognition
     if (this.recognition) {
       try {
         this.recognition.start();
-      } catch (err) {
+      } catch (err: any) {
         console.warn('SpeechRecognition start error:', err);
       }
+    } else {
+      this.onError?.('Speech recognition is not supported in this browser. You can type or paste your response directly.');
     }
 
     return true;
@@ -116,6 +121,12 @@ export class VoiceRecognizer {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioCtx) return;
       this.audioContext = new AudioCtx();
+      
+      // On mobile browsers, AudioContext starts suspended and must be resumed
+      if (this.audioContext.state === 'suspended') {
+        this.audioContext.resume().catch(() => {});
+      }
+
       const source = this.audioContext.createMediaStreamSource(stream);
       this.analyser = this.audioContext.createAnalyser();
       this.analyser.fftSize = 256;

@@ -50,14 +50,28 @@ const TRACKS = [
   'Mixed (Random)',
 ];
 
-export const InterviewView: React.FC = () => {
+export interface InterviewViewProps {
+  initialTrack?: string;
+  initialTopic?: string;
+}
+
+export const InterviewView: React.FC<InterviewViewProps> = ({
+  initialTrack,
+  initialTopic,
+}) => {
   // Config
   const [role, setRole] = useState<string>('Software Engineer');
-  const [track, setTrack] = useState<string>('AI/ML');
+  const [track, setTrack] = useState<string>(initialTrack || 'AI/ML');
   const [difficulty, setDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>('Medium');
   const [durationMinutes, setDurationMinutes] = useState<number>(10);
   const [pressureMode, setPressureMode] = useState<boolean>(false);
   const [projectContext, setProjectContext] = useState<string>('');
+  const [targetTopicFocus, setTargetTopicFocus] = useState<string>(initialTopic || '');
+
+  useEffect(() => {
+    if (initialTrack) setTrack(initialTrack);
+    if (initialTopic) setTargetTopicFocus(initialTopic);
+  }, [initialTrack, initialTopic]);
 
   // Session state: 'setup' | 'active' | 'scorecard'
   const [stage, setStage] = useState<'setup' | 'active' | 'scorecard'>('setup');
@@ -106,7 +120,9 @@ export const InterviewView: React.FC = () => {
           difficulty,
           pressureMode,
           messages: [],
-          projectContext: track === 'Projects' ? projectContext : undefined,
+          projectContext: track === 'Projects'
+            ? projectContext
+            : (targetTopicFocus ? `Target Topic: ${targetTopicFocus}. Test the candidate on this specific topic.` : undefined),
           isDsaMode: track === 'DSA',
         }),
       });
@@ -360,9 +376,24 @@ export const InterviewView: React.FC = () => {
 
           {/* Interview Track */}
           <div className="space-y-3">
-            <label className="text-xs font-bold text-stone-300 uppercase tracking-wider">
-              Interview Track / Round Type
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-stone-300 uppercase tracking-wider">
+                Interview Track / Round Type
+              </label>
+              {targetTopicFocus && (
+                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-teal-950/80 border border-teal-700/60 text-teal-300 font-medium flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
+                  Topic: {targetTopicFocus}
+                  <button
+                    onClick={() => setTargetTopicFocus('')}
+                    className="ml-1 text-teal-400 hover:text-teal-100 font-bold"
+                    title="Clear topic focus"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+            </div>
             <div className="flex flex-wrap gap-2">
               {TRACKS.map((t) => (
                 <button

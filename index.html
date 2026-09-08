@@ -1,10 +1,46 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <script>
+      // Filter out benign Vite HMR websocket notices in sandboxed AI Studio preview iframe
+      (function() {
+        var _err = console.error;
+        console.error = function() {
+          for (var i = 0; i < arguments.length; i++) {
+            var arg = arguments[i];
+            if (typeof arg === 'string' && (arg.indexOf('[vite]') !== -1 || arg.indexOf('vite-plugin-pwa') !== -1)) {
+              console.debug.apply(console, arguments);
+              return;
+            }
+            if (arg && typeof arg === 'object' && arg.message && typeof arg.message === 'string' && (arg.message.indexOf('WebSocket') !== -1 || arg.message.indexOf('vite') !== -1)) {
+              console.debug.apply(console, arguments);
+              return;
+            }
+          }
+          _err.apply(console, arguments);
+        };
+        window.addEventListener('unhandledrejection', function(event) {
+          if (event && event.reason) {
+            var reasonStr = String((event.reason && event.reason.message) || event.reason);
+            if (reasonStr.indexOf('WebSocket') !== -1 || reasonStr.indexOf('vite') !== -1) {
+              event.preventDefault();
+            }
+          }
+        });
+      })();
+    </script>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>InterviewGym AI</title>
     <meta name="description" content="Personal AI communication coach, technical learning coach, and realistic interview simulator." />
+    <meta name="theme-color" content="#1c1917" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="InterviewGym" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="alternate icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta property="og:title" content="InterviewGym AI" />
     <meta property="og:description" content="Personal AI communication coach, technical learning coach, and realistic interview simulator." />
     <meta property="og:type" content="website" />

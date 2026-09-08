@@ -1,0 +1,99 @@
+{
+  "entities": {
+    "UserProfile": {
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "email": { "type": "string" },
+        "targetRole": { "type": "string" },
+        "experienceLevel": { "type": "string" },
+        "speakingFluency": { "type": "number" },
+        "englishGrammar": { "type": "number" },
+        "vocabulary": { "type": "number" },
+        "pronunciationClarity": { "type": "number" },
+        "answerStructure": { "type": "number" },
+        "technicalKnowledge": { "type": "number" },
+        "technicalExplanation": { "type": "number" },
+        "interviewPerformance": { "type": "number" },
+        "confidenceUnderPressure": { "type": "number" },
+        "hrBehavioral": { "type": "number" },
+        "streakDays": { "type": "number" },
+        "lastActiveDate": { "type": "string" },
+        "totalSessionsCompleted": { "type": "number" },
+        "totalSpeakingMinutes": { "type": "number" },
+        "weakestSkill": { "type": "string" },
+        "strongestSkill": { "type": "string" },
+        "recommendedPractice": { "type": "string" },
+        "fillerWordsHistory": { "type": "array" },
+        "scoresHistory": { "type": "array" },
+        "learnedTopics": { "type": "array" },
+        "weakTopics": { "type": "array" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["userId"]
+    },
+    "SpeakingSession": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "topic": { "type": "string" },
+        "topicType": { "type": "string" },
+        "timeLimitSeconds": { "type": "number" },
+        "actualDurationSeconds": { "type": "number" },
+        "transcript": { "type": "string" },
+        "evaluation": { "type": "object" },
+        "pressureMode": { "type": "boolean" }
+      },
+      "required": ["id", "userId", "createdAt", "topic", "transcript"]
+    },
+    "ExplainSession": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "topic": { "type": "string" },
+        "domain": { "type": "string" },
+        "transcript": { "type": "string" },
+        "evaluation": { "type": "object" }
+      },
+      "required": ["id", "userId", "createdAt", "topic", "transcript"]
+    },
+    "InterviewSession": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "role": { "type": "string" },
+        "type": { "type": "string" },
+        "difficulty": { "type": "string" },
+        "durationMinutes": { "type": "number" },
+        "pressureMode": { "type": "boolean" },
+        "messages": { "type": "array" },
+        "scorecard": { "type": "object" }
+      },
+      "required": ["id", "userId", "createdAt", "role", "messages"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile with aggregate performance stats, streaks, and weakness tracking"
+    },
+    "/users/{userId}/speaking_sessions/{sessionId}": {
+      "schema": "SpeakingSession",
+      "description": "Historical random speaking practice sessions with transcript and evaluation"
+    },
+    "/users/{userId}/explain_sessions/{sessionId}": {
+      "schema": "ExplainSession",
+      "description": "Historical learn and explain practice sessions with transcript and evaluation"
+    },
+    "/users/{userId}/interview_sessions/{sessionId}": {
+      "schema": "InterviewSession",
+      "description": "Historical interview simulations with messages, feedback, and scorecards"
+    }
+  }
+}

@@ -499,14 +499,24 @@ export const RandomSpeakingView: React.FC = () => {
               {/* Primary Mic Record Action */}
               <div className="flex flex-col items-center gap-4">
                 {!isRecording ? (
-                  <button
-                    onClick={startRecording}
-                    id="btn-speaking-mic-start"
-                    className="w-24 h-24 rounded-full bg-emerald-500 hover:bg-emerald-400 text-stone-950 flex flex-col items-center justify-center shadow-xl shadow-emerald-950/60 hover:scale-105 transition-transform"
-                  >
-                    <Mic className="w-8 h-8" />
-                    <span className="text-[11px] font-extrabold uppercase mt-1">Speak</span>
-                  </button>
+                  <div className="flex flex-col sm:flex-row items-center gap-3">
+                    <button
+                      onClick={startRecording}
+                      id="btn-speaking-mic-start"
+                      className="w-24 h-24 rounded-full bg-emerald-500 hover:bg-emerald-400 text-stone-950 flex flex-col items-center justify-center shadow-xl shadow-emerald-950/60 hover:scale-105 transition-transform"
+                    >
+                      <Mic className="w-8 h-8" />
+                      <span className="text-[11px] font-extrabold uppercase mt-1">Speak</span>
+                    </button>
+                    {transcript.trim().length >= 5 && (
+                      <button
+                        onClick={stopAndEvaluate}
+                        className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-stone-950 text-xs font-bold transition-colors shadow-md"
+                      >
+                        Evaluate Text Directly
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   <button
                     onClick={stopAndEvaluate}
@@ -534,19 +544,28 @@ export const RandomSpeakingView: React.FC = () => {
                   <span>Live Spoken Transcript</span>
                   <span>{transcript.split(/\s+/).filter(Boolean).length} words</span>
                 </div>
-                <div className="min-h-[80px] p-4 rounded-xl bg-stone-950 border border-stone-800 text-stone-200 text-sm leading-relaxed font-sans">
-                  {transcript ? (
-                    <span>{transcript}</span>
-                  ) : (
-                    <span className="text-stone-500 italic">
-                      Your speech will appear here in real-time as you speak...
-                    </span>
-                  )}
-                </div>
+                {isRecording ? (
+                  <div className="min-h-[80px] p-4 rounded-xl bg-stone-950 border border-stone-800 text-stone-200 text-sm leading-relaxed font-sans">
+                    {transcript ? (
+                      <span>{transcript}</span>
+                    ) : (
+                      <span className="text-stone-500 italic">
+                        Your speech will appear here in real-time as you speak...
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <textarea
+                    value={transcript}
+                    onChange={(e) => setTranscript(e.target.value)}
+                    placeholder="Speak using the microphone above, or type/paste your speech here..."
+                    className="w-full min-h-[90px] p-4 rounded-xl bg-stone-950 border border-stone-800 text-stone-200 text-sm leading-relaxed font-sans focus:outline-none focus:border-emerald-500 resize-y"
+                  />
+                )}
 
                 {/* Manual Edit Fallback */}
                 <div className="text-[11px] text-stone-500">
-                  Tip: If your mic is quiet, you can also paste or tweak words directly above before submitting.
+                  Tip: If your mic is quiet or you are in a quiet room, you can type or edit your response above.
                 </div>
               </div>
 

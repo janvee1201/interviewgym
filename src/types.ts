@@ -99,6 +99,9 @@ export interface TechnicalLesson {
   domain: string;
   depth: 'Beginner' | 'Intermediate' | 'Interview' | 'Deep Technical';
   oneLineExplanation: string;
+  whyItExists?: string;
+  intuition?: string;
+  howItWorks?: string;
   laymanExplanation: string;
   technicalExplanation: string;
   coreConcepts: string[];
@@ -107,6 +110,10 @@ export interface TechnicalLesson {
   practicalExample: string;
   realWorldUseCases: string[];
   commonMisconceptions: string[];
+  relatedTopics?: string[];
+  prerequisites?: string[];
+  nextTopics?: string[];
+  interviewRelevance?: number;
   interviewQuestions: string[];
   followUpQuestions: string[];
   commonMistakesCandidatesMake: string[];
@@ -183,12 +190,56 @@ export interface ExplainSessionRecord {
   evaluation: ExplainEvaluation;
 }
 
+export type AILandscapeCategory =
+  | 'Major AI Models'
+  | 'AI Coding Tools'
+  | 'AI Agent Tools & Ecosystem'
+  | 'Generative AI Tools'
+  | 'AI Infrastructure'
+  | "What's New";
+
+export interface AILandscapeItem {
+  id: string;
+  name: string;
+  category: AILandscapeCategory;
+  subcategory: string;
+  creator: string; // Who makes it
+  whatItIs: string; // What it is
+  mainlyUsedFor: string; // What it is mainly used for
+  capabilities: string[]; // Important capabilities
+  whyEngineerShouldKnow: string; // Why an AI/software engineer should know it
+  conceptualDifference: string; // How it differs conceptually from alternatives
+  interviewQuestions: string[]; // One or two interview questions
+  sampleAnswers?: string[]; // Recommended interview points
+  officialSource?: string; // Official company / model documentation or announcement
+  lastUpdated?: string;
+  isNew?: boolean;
+}
+
 export interface CurrentTopicItem {
+  id?: string;
   title: string;
+  headline?: string;
   category: string;
   summary: string;
+  whatHappened?: string;
   whyItMatters: string;
+  background?: string;
+  perspectives?: string[];
+  keyFacts?: string[];
   interviewQuestions: string[];
+  speakingPrompt?: string;
+  date?: string;
+  source?: string;
+  relevanceBadge?: string;
+}
+
+export interface DomainTopicItem {
+  topic: string;
+  subdomain?: string;
+  difficulty?: 'Beginner' | 'Intermediate' | 'Advanced' | 'Staff';
+  question?: string;
+  whyImportant?: string;
 }
 
 export interface UserPerformanceProfile {
