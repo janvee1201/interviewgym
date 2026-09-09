@@ -3131,6 +3131,23 @@ Return JSON:
 
 // Start Express Server + Vite Middleware
 async function start() {
+  // Explicitly serve static public assets (manifest, sw.js, icons) with correct MIME types
+  const publicPath = path.join(process.cwd(), 'public');
+  app.use(
+    express.static(publicPath, {
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.webmanifest')) {
+          res.setHeader('Content-Type', 'application/manifest+json');
+        } else if (filePath.endsWith('.json')) {
+          res.setHeader('Content-Type', 'application/json');
+        } else if (filePath.endsWith('sw.js')) {
+          res.setHeader('Content-Type', 'application/javascript');
+          res.setHeader('Service-Worker-Allowed', '/');
+        }
+      },
+    })
+  );
+
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },

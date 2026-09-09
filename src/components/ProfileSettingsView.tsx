@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { UserPerformanceProfile } from '../types';
 import { saveProfile } from '../lib/storage';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface ProfileSettingsViewProps {
   profile: UserPerformanceProfile;
@@ -210,6 +211,9 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* PWA / App Installation Card */}
+      <PWAInstallButton variant="settings" />
     </div>
   );
 };

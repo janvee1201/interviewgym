@@ -121,8 +121,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Right Header Statuses & Profile */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-            {/* PWA Install Button */}
-            <PWAInstallButton />
+            {/* PWA Install Button (Header) */}
+            <PWAInstallButton variant="header" className="hidden sm:flex" />
 
             {/* Streak Badge */}
             <div
@@ -329,8 +329,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               })}
             </div>
 
-            {/* Drawer Footer with Streak, Settings & Account */}
+            {/* Drawer Footer with Install App, Streak, Settings & Account */}
             <div className="p-3 border-t border-stone-800 bg-stone-900/80 shrink-0 space-y-2">
+              {/* Install App option in mobile menu */}
+              <PWAInstallButton variant="mobile-drawer" />
+
               <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-stone-950 border border-stone-800/80 text-xs">
                 <div className="flex items-center gap-2 text-amber-300 font-semibold">
                   <Flame className="w-4 h-4 text-amber-400 animate-pulse" />

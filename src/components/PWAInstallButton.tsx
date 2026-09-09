@@ -1,103 +1,166 @@
 import React, { useState } from 'react';
-import { Download, Share2, X, Smartphone } from 'lucide-react';
+import { Download, CheckCircle, Smartphone, Info } from 'lucide-react';
 import { usePWAInstall } from '../lib/usePWAInstall';
+import { PWAInstallModal } from './PWAInstallModal';
 
-export const PWAInstallButton: React.FC = () => {
-  const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
-  const [showIOSGuide, setShowIOSGuide] = useState(false);
+interface PWAInstallButtonProps {
+  variant?: 'header' | 'mobile-drawer' | 'settings';
+  className?: string;
+}
 
-  // If already running as an installed PWA on home screen, do not show
-  if (isInstalled) {
-    return null;
-  }
+export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
+  variant = 'header',
+  className = '',
+}) => {
+  const { isInstallable, isInstalled, isIOS, isAndroid, install } = usePWAInstall();
+  const [modalOpen, setModalOpen] = useState(false);
 
-  // Chromium / Android / Desktop flow
-  if (isInstallable) {
-    return (
-      <button
-        onClick={install}
-        id="btn-pwa-install-header"
-        className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-xs font-bold shadow-md shadow-emerald-950 transition-all hover:scale-105 active:scale-95"
-        title="Install InterviewGym App on your device"
-      >
-        <Download className="w-3.5 h-3.5 stroke-[2.5]" />
-        <span>Install App</span>
-      </button>
-    );
-  }
+  const handleClick = async () => {
+    if (isInstallable) {
+      const accepted = await install();
+      if (!accepted) {
+        setModalOpen(true);
+      }
+    } else {
+      setModalOpen(true);
+    }
+  };
 
-  // iOS Safari flow
-  if (isIOS) {
+  // 1. SETTINGS VIEW VARIANT
+  if (variant === 'settings') {
     return (
       <>
-        <button
-          onClick={() => setShowIOSGuide(true)}
-          id="btn-pwa-install-ios"
-          className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-700 text-xs font-medium transition-colors"
-          title="Install on iPhone / iPad"
-        >
-          <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Add to Home</span>
-        </button>
+        <div className="rounded-2xl bg-stone-950 border border-stone-800 p-5 sm:p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Smartphone className="w-4 h-4 text-emerald-400" />
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                  Mobile App & PWA Installation
+                </h3>
+              </div>
+              <p className="text-xs text-stone-400 max-w-xl">
+                Install InterviewGym AI directly onto your home screen for full-screen standalone practice, zero address bar distractions, and offline caching.
+              </p>
+            </div>
 
-        {showIOSGuide && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="w-full max-w-sm rounded-2xl bg-stone-900 border border-stone-800 p-6 shadow-2xl space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-stone-950 font-black text-xs">
-                    IG
-                  </div>
-                  <h3 className="text-base font-bold text-white">Install on iPhone / iPad</h3>
+            <div className="shrink-0">
+              {isInstalled ? (
+                <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-950/60 border border-emerald-800/80 text-emerald-300 text-xs font-semibold">
+                  <CheckCircle className="w-4 h-4 text-emerald-400" />
+                  <span>Installed (Standalone)</span>
                 </div>
+              ) : (
                 <button
-                  onClick={() => setShowIOSGuide(false)}
-                  className="p-1 text-stone-400 hover:text-white rounded-lg"
+                  type="button"
+                  onClick={handleClick}
+                  id="btn-settings-install-pwa"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-stone-950 text-xs font-bold shadow-md shadow-emerald-950 transition-all hover:scale-105 active:scale-95"
                 >
-                  <X className="w-5 h-5" />
+                  <Download className="w-4 h-4 stroke-[2.5]" />
+                  <span>Install App</span>
                 </button>
-              </div>
-
-              <div className="rounded-xl bg-stone-950 p-4 border border-stone-800/80 space-y-3 text-xs text-stone-300">
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-stone-800 flex items-center justify-center text-emerald-400 font-bold shrink-0">
-                    1
-                  </div>
-                  <p>
-                    Tap the <strong className="text-white">Share</strong> button <Share2 className="w-3.5 h-3.5 inline text-sky-400 mx-0.5" /> in the Safari toolbar at the bottom or top of your screen.
-                  </p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-stone-800 flex items-center justify-center text-emerald-400 font-bold shrink-0">
-                    2
-                  </div>
-                  <p>
-                    Scroll down and tap <strong className="text-white">Add to Home Screen</strong>.
-                  </p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-stone-800 flex items-center justify-center text-emerald-400 font-bold shrink-0">
-                    3
-                  </div>
-                  <p>
-                    Tap <strong className="text-emerald-400">Add</strong> in the top right. InterviewGym AI will launch full-screen like a native app.
-                  </p>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setShowIOSGuide(false)}
-                className="w-full py-2.5 rounded-xl bg-emerald-500 text-stone-950 font-bold text-xs hover:bg-emerald-400 transition-colors"
-              >
-                Got It
-              </button>
+              )}
             </div>
           </div>
-        )}
+
+          {!isInstalled && (
+            <div className="flex items-start gap-2 pt-2 border-t border-stone-800/60 text-[11px] text-stone-400">
+              <Info className="w-3.5 h-3.5 text-stone-500 shrink-0 mt-0.5" />
+              <span>
+                Supported on Android (Chrome/Edge/Samsung Internet), iOS Safari (Add to Home Screen), and Desktop Chrome/Edge.
+              </span>
+            </div>
+          )}
+        </div>
+
+        <PWAInstallModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          isIOS={isIOS}
+          isAndroid={isAndroid}
+        />
       </>
     );
   }
 
-  // Fallback for other browsers: provide a simple install button in case beforeinstallprompt triggers later or to show instructions
-  return null;
+  // 2. MOBILE DRAWER VARIANT
+  if (variant === 'mobile-drawer') {
+    if (isInstalled) {
+      return (
+        <div className="flex items-center gap-2.5 p-3 rounded-xl bg-stone-950 border border-stone-800/80 text-xs text-stone-400">
+          <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+          <div className="min-w-0">
+            <span className="font-semibold text-stone-200">Installed on Home Screen</span>
+            <p className="text-[10px] text-stone-500">Running in standalone mode</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <button
+          type="button"
+          onClick={handleClick}
+          id="btn-mobile-drawer-install-pwa"
+          className="w-full flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-stone-950 font-bold shadow-lg shadow-emerald-950/50 hover:brightness-105 active:scale-[0.99] transition-all"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-1.5 rounded-lg bg-stone-950/20 text-stone-950 shrink-0">
+              <Download className="w-4 h-4 stroke-[2.5]" />
+            </div>
+            <div className="text-left min-w-0">
+              <div className="text-sm font-extrabold leading-tight truncate">Install App</div>
+              <div className="text-[11px] text-stone-950/80 font-semibold truncate">
+                Add to your phone home screen
+              </div>
+            </div>
+          </div>
+          <span className="text-[10px] uppercase font-black tracking-wider bg-stone-950 text-emerald-300 px-2 py-0.5 rounded shrink-0 ml-2">
+            PWA
+          </span>
+        </button>
+
+        <PWAInstallModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          isIOS={isIOS}
+          isAndroid={isAndroid}
+        />
+      </>
+    );
+  }
+
+  // 3. HEADER VARIANT (DEFAULT)
+  // Hide if already running in standalone installed mode
+  if (isInstalled) {
+    return null;
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={handleClick}
+        id="btn-pwa-install-header"
+        className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-xs font-bold transition-all ${
+          isInstallable
+            ? 'bg-emerald-500 hover:bg-emerald-400 text-stone-950 shadow-md shadow-emerald-950 hover:scale-105 active:scale-95'
+            : 'bg-stone-800 hover:bg-stone-750 text-stone-200 border border-stone-700'
+        } ${className}`}
+        title="Install InterviewGym AI app"
+      >
+        <Download className="w-3.5 h-3.5 stroke-[2.5]" />
+        <span>Install App</span>
+      </button>
+
+      <PWAInstallModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        isIOS={isIOS}
+        isAndroid={isAndroid}
+      />
+    </>
+  );
 };
