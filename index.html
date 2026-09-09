@@ -4,27 +4,49 @@
     <script>
       // Filter out benign Vite HMR websocket notices in sandboxed AI Studio preview iframe
       (function() {
-        var _err = console.error;
+        function shouldFilter(msg) {
+          if (!msg) return false;
+          var str = '';
+          try {
+            str = typeof msg === 'string' ? msg : (msg.message || JSON.stringify(msg) || String(msg));
+          } catch(e) {
+            str = String(msg);
+          }
+          str = str.toLowerCase();
+          return str.includes('[vite]') || str.includes('websocket') || str.includes('vite-plugin-pwa');
+        }
+
+        var origError = console.error;
         console.error = function() {
           for (var i = 0; i < arguments.length; i++) {
-            var arg = arguments[i];
-            if (typeof arg === 'string' && (arg.indexOf('[vite]') !== -1 || arg.indexOf('vite-plugin-pwa') !== -1)) {
-              console.debug.apply(console, arguments);
-              return;
-            }
-            if (arg && typeof arg === 'object' && arg.message && typeof arg.message === 'string' && (arg.message.indexOf('WebSocket') !== -1 || arg.message.indexOf('vite') !== -1)) {
-              console.debug.apply(console, arguments);
+            if (shouldFilter(arguments[i])) {
               return;
             }
           }
-          _err.apply(console, arguments);
+          origError.apply(console, arguments);
         };
-        window.addEventListener('unhandledrejection', function(event) {
-          if (event && event.reason) {
-            var reasonStr = String((event.reason && event.reason.message) || event.reason);
-            if (reasonStr.indexOf('WebSocket') !== -1 || reasonStr.indexOf('vite') !== -1) {
-              event.preventDefault();
+
+        var origWarn = console.warn;
+        console.warn = function() {
+          for (var i = 0; i < arguments.length; i++) {
+            if (shouldFilter(arguments[i])) {
+              return;
             }
+          }
+          origWarn.apply(console, arguments);
+        };
+
+        window.addEventListener('error', function(event) {
+          if (event && (shouldFilter(event.message) || shouldFilter(event.filename) || shouldFilter(event.error))) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+          }
+        }, true);
+
+        window.addEventListener('unhandledrejection', function(event) {
+          if (event && shouldFilter(event.reason)) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
           }
         });
       })();
