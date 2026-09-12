@@ -232,4 +232,4 @@ Instead:
                        Improve
                           │
                     Track Progress
-From knowing the answer to confidently delivering it — that's the gap InterviewGym is built to close.
+
