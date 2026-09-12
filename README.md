@@ -2,7 +2,7 @@
 
 ### AI-powered interview practice for students who know the concepts — but struggle to explain them.
 
-[Live Demo]([[YOUR_DEPLOYED_LINK_HERE](https://interviewgym-ai.ai.studio)]) · 
+[Live Demo]([Live Demo](https://interviewgym-ai.ai.studio)) · 
 
 ---
 
@@ -37,7 +37,7 @@ Instead of only giving you questions and answers, it creates a practice loop:
 
 The idea is simple: interview skills improve through repeated practice, not just passive preparation.
 
-**[Try InterviewGym AI →](YOUR_DEPLOYED_LINK_HERE)**
+**[Try InterviewGym AI →][Live Demo](https://interviewgym-ai.ai.studio)
 
 ---
 
@@ -232,3 +232,4 @@ Instead:
                        Improve
                           │
                     Track Progress
+From knowing the answer to confidently delivering it — that's the gap InterviewGym is built to close.
