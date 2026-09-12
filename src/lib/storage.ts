@@ -5,24 +5,35 @@ import {
   InterviewSession,
   DailyPlan,
 } from '../types';
-import { auth } from './firebase';
 import {
-  persistUserProfile,
-  persistSpeakingSession,
-  persistExplainSession,
-  persistInterviewSession,
   fetchUserProfile,
   fetchSpeakingSessions,
   fetchExplainSessions,
   fetchInterviewSessions,
+  persistUserProfile,
+  persistSpeakingSession,
+  persistExplainSession,
+  persistInterviewSession,
   EMPTY_USER_PROFILE,
 } from './firestoreStorage';
+import { auth } from './firebase';
 
-const PROFILE_KEY = 'interviewgym_user_profile_v1';
-const SPEAKING_SESSIONS_KEY = 'interviewgym_speaking_sessions_v1';
-const EXPLAIN_SESSIONS_KEY = 'interviewgym_explain_sessions_v1';
-const INTERVIEW_SESSIONS_KEY = 'interviewgym_interview_sessions_v1';
-const DAILY_PLAN_KEY = 'interviewgym_daily_plan_v1';
+const LEGACY_KEYS = {
+  profile: 'interviewgym_user_profile_v1',
+  speaking: 'interviewgym_speaking_sessions_v1',
+  explain: 'interviewgym_explain_sessions_v1',
+  interview: 'interviewgym_interview_sessions_v1',
+  dailyPlan: 'interviewgym_daily_plan_v1',
+};
+
+/**
+ * Returns a user-scoped localStorage key based on authenticated Firebase UID
+ */
+export function getUserKey(suffix: string, customUid?: string): string | null {
+  const uid = customUid || auth.currentUser?.uid;
+  if (!uid) return null;
+  return `interviewgym_${uid}_${suffix}`;
+}
 
 export const DEFAULT_PROFILE: UserPerformanceProfile = {
   speakingFluency: 0,
@@ -52,10 +63,10 @@ export const DEFAULT_PROFILE: UserPerformanceProfile = {
 };
 
 /**
- * Sync all user data from Firestore into local cache
+ * Sync all user data from Firestore into user-isolated local cache
  */
 export async function syncUserDataWithFirestore(userId: string): Promise<UserPerformanceProfile> {
-  if (!userId) return getProfile();
+  if (!userId) return DEFAULT_PROFILE;
 
   try {
     const cloudProfile = await fetchUserProfile(userId);
@@ -63,21 +74,52 @@ export async function syncUserDataWithFirestore(userId: string): Promise<UserPer
     const cloudExplain = await fetchExplainSessions(userId);
     const cloudInterview = await fetchInterviewSessions(userId);
 
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(cloudProfile));
-    localStorage.setItem(SPEAKING_SESSIONS_KEY, JSON.stringify(cloudSpeaking));
-    localStorage.setItem(EXPLAIN_SESSIONS_KEY, JSON.stringify(cloudExplain));
-    localStorage.setItem(INTERVIEW_SESSIONS_KEY, JSON.stringify(cloudInterview));
+    const profileKey = getUserKey('profile_v1', userId);
+    const speakingKey = getUserKey('speaking_sessions_v1', userId);
+    const explainKey = getUserKey('explain_sessions_v1', userId);
+    const interviewKey = getUserKey('interview_sessions_v1', userId);
+
+    if (profileKey) localStorage.setItem(profileKey, JSON.stringify(cloudProfile));
+    if (speakingKey) localStorage.setItem(speakingKey, JSON.stringify(cloudSpeaking));
+    if (explainKey) localStorage.setItem(explainKey, JSON.stringify(cloudExplain));
+    if (interviewKey) localStorage.setItem(interviewKey, JSON.stringify(cloudInterview));
 
     return cloudProfile;
   } catch (err) {
     console.warn('Error synchronizing with Firestore:', err);
-    return getProfile();
+    return getProfile(userId);
   }
 }
 
-export function getProfile(): UserPerformanceProfile {
+export function getProfile(customUid?: string): UserPerformanceProfile {
+  const uid = customUid || auth.currentUser?.uid;
+  if (!uid) {
+    return DEFAULT_PROFILE;
+  }
+
   try {
-    const raw = localStorage.getItem(PROFILE_KEY);
+    const key = getUserKey('profile_v1', uid);
+    let raw = key ? localStorage.getItem(key) : null;
+
+    // Check if intermediate firestore key exists
+    if (!raw) {
+      const intermediateKey = `interviewgym_${uid}_profile`;
+      raw = localStorage.getItem(intermediateKey);
+    }
+
+    // Backward compatibility: If local cache hasn't migrated yet, check legacy un-scoped key
+    if (!raw) {
+      const legacy = localStorage.getItem(LEGACY_KEYS.profile);
+      if (legacy) {
+        raw = legacy;
+        if (key) {
+          try {
+            localStorage.setItem(key, legacy);
+          } catch {}
+        }
+      }
+    }
+
     if (!raw) {
       return DEFAULT_PROFILE;
     }
@@ -88,21 +130,26 @@ export function getProfile(): UserPerformanceProfile {
   }
 }
 
-export function saveProfile(profile: UserPerformanceProfile): void {
+export function saveProfile(profile: UserPerformanceProfile, customUid?: string): void {
+  const uid = customUid || auth.currentUser?.uid;
+  if (!uid) return;
+
   try {
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
-    if (auth.currentUser?.uid) {
-      persistUserProfile(auth.currentUser.uid, profile).catch((err) =>
-        console.warn('Cloud profile sync warning:', err)
-      );
+    const key = getUserKey('profile_v1', uid);
+    if (key) {
+      localStorage.setItem(key, JSON.stringify(profile));
     }
+    persistUserProfile(uid, profile).catch((err) =>
+      console.warn('Cloud profile sync warning:', err)
+    );
   } catch (err) {
     console.error('Failed to save profile', err);
   }
 }
 
-export function updateStreak(): UserPerformanceProfile {
-  const profile = getProfile();
+export function updateStreak(customUid?: string): UserPerformanceProfile {
+  const uid = customUid || auth.currentUser?.uid;
+  const profile = getProfile(uid);
   const today = new Date().toISOString().slice(0, 10);
 
   if (profile.lastActiveDate === today) {
@@ -129,18 +176,24 @@ export function updateStreak(): UserPerformanceProfile {
     streakDays: newStreak,
     lastActiveDate: today,
   };
-  saveProfile(updated);
+  saveProfile(updated, uid);
   return updated;
 }
 
-export function recordSpeakingSession(record: SpeakingSessionRecord): void {
+export function recordSpeakingSession(record: SpeakingSessionRecord, customUid?: string): void {
+  const uid = customUid || auth.currentUser?.uid;
+  if (!uid) return;
+
   try {
-    const sessions = getSpeakingSessions();
+    const sessions = getSpeakingSessions(uid);
     sessions.unshift(record);
-    localStorage.setItem(SPEAKING_SESSIONS_KEY, JSON.stringify(sessions.slice(0, 100)));
+    const key = getUserKey('speaking_sessions_v1', uid);
+    if (key) {
+      localStorage.setItem(key, JSON.stringify(sessions.slice(0, 100)));
+    }
 
     // update profile stats
-    const profile = getProfile();
+    const profile = getProfile(uid);
     const newTotal = profile.totalSessionsCompleted + 1;
     const newSpeakingMins = profile.totalSpeakingMinutes + Math.ceil(record.actualDurationSeconds / 60);
 
@@ -221,26 +274,30 @@ export function recordSpeakingSession(record: SpeakingSessionRecord): void {
       lastActiveDate: new Date().toISOString().slice(0, 10),
     };
 
-    saveProfile(updatedProfile);
+    saveProfile(updatedProfile, uid);
 
     // Cloud persistence
-    if (auth.currentUser?.uid) {
-      persistSpeakingSession(auth.currentUser.uid, record, profile).catch((err) =>
-        console.warn('Cloud speaking session sync warning:', err)
-      );
-    }
+    persistSpeakingSession(uid, record, profile).catch((err) =>
+      console.warn('Cloud speaking session sync warning:', err)
+    );
   } catch (err) {
     console.error('Failed to record speaking session', err);
   }
 }
 
-export function recordExplainSession(record: ExplainSessionRecord): void {
-  try {
-    const sessions = getExplainSessions();
-    sessions.unshift(record);
-    localStorage.setItem(EXPLAIN_SESSIONS_KEY, JSON.stringify(sessions.slice(0, 100)));
+export function recordExplainSession(record: ExplainSessionRecord, customUid?: string): void {
+  const uid = customUid || auth.currentUser?.uid;
+  if (!uid) return;
 
-    const profile = getProfile();
+  try {
+    const sessions = getExplainSessions(uid);
+    sessions.unshift(record);
+    const key = getUserKey('explain_sessions_v1', uid);
+    if (key) {
+      localStorage.setItem(key, JSON.stringify(sessions.slice(0, 100)));
+    }
+
+    const profile = getProfile(uid);
     const isFirst = profile.totalSessionsCompleted === 0;
     const alpha = 0.25;
     const newTechExpl = isFirst
@@ -291,32 +348,36 @@ export function recordExplainSession(record: ExplainSessionRecord): void {
       lastActiveDate: new Date().toISOString().slice(0, 10),
     };
 
-    saveProfile(updatedProfile);
+    saveProfile(updatedProfile, uid);
 
     // Cloud persistence
-    if (auth.currentUser?.uid) {
-      persistExplainSession(auth.currentUser.uid, record, profile).catch((err) =>
-        console.warn('Cloud explain session sync warning:', err)
-      );
-    }
+    persistExplainSession(uid, record, profile).catch((err) =>
+      console.warn('Cloud explain session sync warning:', err)
+    );
   } catch (err) {
     console.error('Failed to record explain session', err);
   }
 }
 
-export function recordInterviewSession(session: InterviewSession): void {
+export function recordInterviewSession(session: InterviewSession, customUid?: string): void {
+  const uid = customUid || auth.currentUser?.uid;
+  if (!uid) return;
+
   try {
-    const sessions = getInterviewSessions();
+    const sessions = getInterviewSessions(uid);
     const existingIdx = sessions.findIndex((s) => s.id === session.id);
     if (existingIdx >= 0) {
       sessions[existingIdx] = session;
     } else {
       sessions.unshift(session);
     }
-    localStorage.setItem(INTERVIEW_SESSIONS_KEY, JSON.stringify(sessions.slice(0, 100)));
+    const key = getUserKey('interview_sessions_v1', uid);
+    if (key) {
+      localStorage.setItem(key, JSON.stringify(sessions.slice(0, 100)));
+    }
 
     if (session.scorecard) {
-      const profile = getProfile();
+      const profile = getProfile(uid);
       const isFirst = profile.totalSessionsCompleted === 0;
       const alpha = 0.25;
       const card = session.scorecard;
@@ -349,50 +410,126 @@ export function recordInterviewSession(session: InterviewSession): void {
         ].slice(-15),
         lastActiveDate: new Date().toISOString().slice(0, 10),
       };
-      saveProfile(updatedProfile);
+      saveProfile(updatedProfile, uid);
 
       // Cloud persistence
-      if (auth.currentUser?.uid) {
-        persistInterviewSession(auth.currentUser.uid, session, profile).catch((err) =>
-          console.warn('Cloud interview session sync warning:', err)
-        );
-      }
+      persistInterviewSession(uid, session, profile).catch((err) =>
+        console.warn('Cloud interview session sync warning:', err)
+      );
     }
   } catch (err) {
     console.error('Failed to record interview session', err);
   }
 }
 
-export function getSpeakingSessions(): SpeakingSessionRecord[] {
+export function getSpeakingSessions(customUid?: string): SpeakingSessionRecord[] {
+  const uid = customUid || auth.currentUser?.uid;
+  if (!uid) return [];
+
   try {
-    const raw = localStorage.getItem(SPEAKING_SESSIONS_KEY);
+    const key = getUserKey('speaking_sessions_v1', uid);
+    let raw = key ? localStorage.getItem(key) : null;
+
+    if (!raw) {
+      const intermediateKey = `interviewgym_${uid}_speaking_sessions`;
+      raw = localStorage.getItem(intermediateKey);
+    }
+
+    if (!raw) {
+      const legacy = localStorage.getItem(LEGACY_KEYS.speaking);
+      if (legacy) {
+        raw = legacy;
+        if (key) {
+          try {
+            localStorage.setItem(key, legacy);
+          } catch {}
+        }
+      }
+    }
+
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
 }
 
-export function getExplainSessions(): ExplainSessionRecord[] {
+export function getExplainSessions(customUid?: string): ExplainSessionRecord[] {
+  const uid = customUid || auth.currentUser?.uid;
+  if (!uid) return [];
+
   try {
-    const raw = localStorage.getItem(EXPLAIN_SESSIONS_KEY);
+    const key = getUserKey('explain_sessions_v1', uid);
+    let raw = key ? localStorage.getItem(key) : null;
+
+    if (!raw) {
+      const intermediateKey = `interviewgym_${uid}_explain_sessions`;
+      raw = localStorage.getItem(intermediateKey);
+    }
+
+    if (!raw) {
+      const legacy = localStorage.getItem(LEGACY_KEYS.explain);
+      if (legacy) {
+        raw = legacy;
+        if (key) {
+          try {
+            localStorage.setItem(key, legacy);
+          } catch {}
+        }
+      }
+    }
+
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
 }
 
-export function getInterviewSessions(): InterviewSession[] {
+export function getInterviewSessions(customUid?: string): InterviewSession[] {
+  const uid = customUid || auth.currentUser?.uid;
+  if (!uid) return [];
+
   try {
-    const raw = localStorage.getItem(INTERVIEW_SESSIONS_KEY);
+    const key = getUserKey('interview_sessions_v1', uid);
+    let raw = key ? localStorage.getItem(key) : null;
+
+    if (!raw) {
+      const intermediateKey = `interviewgym_${uid}_interview_sessions`;
+      raw = localStorage.getItem(intermediateKey);
+    }
+
+    if (!raw) {
+      const legacy = localStorage.getItem(LEGACY_KEYS.interview);
+      if (legacy) {
+        raw = legacy;
+        if (key) {
+          try {
+            localStorage.setItem(key, legacy);
+          } catch {}
+        }
+      }
+    }
+
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
 }
 
-export function getSavedDailyPlan(): DailyPlan | null {
+export function getSavedDailyPlan(customUid?: string): DailyPlan | null {
+  const uid = customUid || auth.currentUser?.uid;
+  if (!uid) return null;
+
   try {
-    const raw = localStorage.getItem(DAILY_PLAN_KEY);
+    const key = getUserKey('daily_plan_v1', uid);
+    let raw = key ? localStorage.getItem(key) : null;
+
+    if (!raw) {
+      const legacy = localStorage.getItem(LEGACY_KEYS.dailyPlan);
+      if (legacy) {
+        raw = legacy;
+      }
+    }
+
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     const today = new Date().toISOString().slice(0, 10);
@@ -405,34 +542,54 @@ export function getSavedDailyPlan(): DailyPlan | null {
 
 export const getDailyPlan = getSavedDailyPlan;
 
-export function saveDailyPlan(plan: DailyPlan): void {
+export function saveDailyPlan(plan: DailyPlan, customUid?: string): void {
+  const uid = customUid || auth.currentUser?.uid;
+  if (!uid) return;
+
   try {
-    localStorage.setItem(DAILY_PLAN_KEY, JSON.stringify(plan));
+    const key = getUserKey('daily_plan_v1', uid);
+    if (key) {
+      localStorage.setItem(key, JSON.stringify(plan));
+    }
   } catch (err) {
     console.error('Failed to save daily plan', err);
   }
 }
 
-export function exportAllData(): string {
+export function exportAllData(customUid?: string): string {
+  const uid = customUid || auth.currentUser?.uid;
   const data = {
-    profile: getProfile(),
-    speakingSessions: getSpeakingSessions(),
-    explainSessions: getExplainSessions(),
-    interviewSessions: getInterviewSessions(),
-    dailyPlan: getSavedDailyPlan(),
+    profile: getProfile(uid),
+    speakingSessions: getSpeakingSessions(uid),
+    explainSessions: getExplainSessions(uid),
+    interviewSessions: getInterviewSessions(uid),
+    dailyPlan: getSavedDailyPlan(uid),
     exportedAt: new Date().toISOString(),
   };
   return JSON.stringify(data, null, 2);
 }
 
-export function importAllData(jsonString: string): boolean {
+export function importAllData(jsonString: string, customUid?: string): boolean {
+  const uid = customUid || auth.currentUser?.uid;
+  if (!uid) return false;
+
   try {
     const data = JSON.parse(jsonString);
-    if (data.profile) localStorage.setItem(PROFILE_KEY, JSON.stringify(data.profile));
-    if (data.speakingSessions) localStorage.setItem(SPEAKING_SESSIONS_KEY, JSON.stringify(data.speakingSessions));
-    if (data.explainSessions) localStorage.setItem(EXPLAIN_SESSIONS_KEY, JSON.stringify(data.explainSessions));
-    if (data.interviewSessions) localStorage.setItem(INTERVIEW_SESSIONS_KEY, JSON.stringify(data.interviewSessions));
-    if (data.dailyPlan) localStorage.setItem(DAILY_PLAN_KEY, JSON.stringify(data.dailyPlan));
+    const profileKey = getUserKey('profile_v1', uid);
+    const speakingKey = getUserKey('speaking_sessions_v1', uid);
+    const explainKey = getUserKey('explain_sessions_v1', uid);
+    const interviewKey = getUserKey('interview_sessions_v1', uid);
+    const dailyPlanKey = getUserKey('daily_plan_v1', uid);
+
+    if (data.profile && profileKey) localStorage.setItem(profileKey, JSON.stringify(data.profile));
+    if (data.speakingSessions && speakingKey) localStorage.setItem(speakingKey, JSON.stringify(data.speakingSessions));
+    if (data.explainSessions && explainKey) localStorage.setItem(explainKey, JSON.stringify(data.explainSessions));
+    if (data.interviewSessions && interviewKey) localStorage.setItem(interviewKey, JSON.stringify(data.interviewSessions));
+    if (data.dailyPlan && dailyPlanKey) localStorage.setItem(dailyPlanKey, JSON.stringify(data.dailyPlan));
+
+    if (data.profile) {
+      saveProfile(data.profile, uid);
+    }
     return true;
   } catch (err) {
     console.error('Import failed', err);
@@ -440,11 +597,27 @@ export function importAllData(jsonString: string): boolean {
   }
 }
 
-export function clearAllData(): void {
-  localStorage.removeItem(PROFILE_KEY);
-  localStorage.removeItem(SPEAKING_SESSIONS_KEY);
-  localStorage.removeItem(EXPLAIN_SESSIONS_KEY);
-  localStorage.removeItem(INTERVIEW_SESSIONS_KEY);
-  localStorage.removeItem(DAILY_PLAN_KEY);
-  saveProfile(DEFAULT_PROFILE);
+export function clearAllData(customUid?: string): void {
+  const uid = customUid || auth.currentUser?.uid;
+  if (!uid) return;
+
+  const profileKey = getUserKey('profile_v1', uid);
+  const speakingKey = getUserKey('speaking_sessions_v1', uid);
+  const explainKey = getUserKey('explain_sessions_v1', uid);
+  const interviewKey = getUserKey('interview_sessions_v1', uid);
+  const dailyPlanKey = getUserKey('daily_plan_v1', uid);
+
+  if (profileKey) localStorage.removeItem(profileKey);
+  if (speakingKey) localStorage.removeItem(speakingKey);
+  if (explainKey) localStorage.removeItem(explainKey);
+  if (interviewKey) localStorage.removeItem(interviewKey);
+  if (dailyPlanKey) localStorage.removeItem(dailyPlanKey);
+
+  // Also clear any unversioned fallback cache for this user
+  localStorage.removeItem(`interviewgym_${uid}_profile`);
+  localStorage.removeItem(`interviewgym_${uid}_speaking_sessions`);
+  localStorage.removeItem(`interviewgym_${uid}_explain_sessions`);
+  localStorage.removeItem(`interviewgym_${uid}_interview_sessions`);
+
+  saveProfile(DEFAULT_PROFILE, uid);
 }

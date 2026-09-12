@@ -11,7 +11,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { UserPerformanceProfile } from '../types';
-import { saveProfile } from '../lib/storage';
+import { saveProfile, clearAllData } from '../lib/storage';
 import { PWAInstallButton } from './PWAInstallButton';
 
 interface ProfileSettingsViewProps {
@@ -49,7 +49,7 @@ export const ProfileSettingsView: React.FC<ProfileSettingsViewProps> = ({
 
   const handleResetData = () => {
     if (window.confirm('Reset all training telemetry and local scores back to default baseline?')) {
-      localStorage.clear();
+      clearAllData();
       window.location.reload();
     }
   };

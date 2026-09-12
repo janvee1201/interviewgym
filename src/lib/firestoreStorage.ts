@@ -8,7 +8,7 @@ import {
   orderBy,
   limit,
 } from 'firebase/firestore';
-import { db } from './firebase';
+import { db, auth } from './firebase';
 import {
   UserPerformanceProfile,
   SpeakingSessionRecord,
@@ -45,7 +45,7 @@ export const EMPTY_USER_PROFILE: UserPerformanceProfile = {
 };
 
 // Helper: localStorage fallback cache key per user
-const getLocalKey = (userId: string, key: string) => `interviewgym_${userId}_${key}`;
+const getLocalKey = (userId: string, key: string) => `interviewgym_${userId}_${key}_v1`;
 
 /**
  * Fetch the user's performance profile from Firestore (with local cache fallback)
@@ -69,8 +69,22 @@ export async function fetchUserProfile(userId: string): Promise<UserPerformanceP
       return merged;
     }
 
-    // Check local cache if cloud doc doesn't exist yet
-    const localCached = localStorage.getItem(getLocalKey(userId, 'profile'));
+    // Check user-scoped local cache if cloud doc doesn't exist yet
+    let localCached = localStorage.getItem(getLocalKey(userId, 'profile'));
+    if (!localCached) {
+      localCached = localStorage.getItem(`interviewgym_${userId}_profile`);
+    }
+
+    // Check legacy un-scoped cache
+    if (!localCached) {
+      localCached = localStorage.getItem('interviewgym_user_profile_v1');
+      if (localCached) {
+        try {
+          localStorage.setItem(getLocalKey(userId, 'profile'), localCached);
+        } catch {}
+      }
+    }
+
     if (localCached) {
       try {
         return JSON.parse(localCached);
@@ -81,7 +95,10 @@ export async function fetchUserProfile(userId: string): Promise<UserPerformanceP
     return EMPTY_USER_PROFILE;
   } catch (err) {
     console.warn('Error fetching user profile from Firestore, using local cache:', err);
-    const localCached = localStorage.getItem(getLocalKey(userId, 'profile'));
+    let localCached = localStorage.getItem(getLocalKey(userId, 'profile'));
+    if (!localCached) {
+      localCached = localStorage.getItem(`interviewgym_${userId}_profile`);
+    }
     if (localCached) {
       try {
         return JSON.parse(localCached);
@@ -445,7 +462,13 @@ export async function fetchSpeakingSessions(userId: string): Promise<SpeakingSes
 
   // Fallback to local cache
   try {
-    const local = localStorage.getItem(getLocalKey(userId, 'speaking_sessions'));
+    let local = localStorage.getItem(getLocalKey(userId, 'speaking_sessions'));
+    if (!local) {
+      local = localStorage.getItem(`interviewgym_${userId}_speaking_sessions`);
+    }
+    if (!local) {
+      local = localStorage.getItem('interviewgym_speaking_sessions_v1');
+    }
     return local ? JSON.parse(local) : [];
   } catch {
     return [];
@@ -477,7 +500,13 @@ export async function fetchExplainSessions(userId: string): Promise<ExplainSessi
   }
 
   try {
-    const local = localStorage.getItem(getLocalKey(userId, 'explain_sessions'));
+    let local = localStorage.getItem(getLocalKey(userId, 'explain_sessions'));
+    if (!local) {
+      local = localStorage.getItem(`interviewgym_${userId}_explain_sessions`);
+    }
+    if (!local) {
+      local = localStorage.getItem('interviewgym_explain_sessions_v1');
+    }
     return local ? JSON.parse(local) : [];
   } catch {
     return [];
@@ -509,7 +538,13 @@ export async function fetchInterviewSessions(userId: string): Promise<InterviewS
   }
 
   try {
-    const local = localStorage.getItem(getLocalKey(userId, 'interview_sessions'));
+    let local = localStorage.getItem(getLocalKey(userId, 'interview_sessions'));
+    if (!local) {
+      local = localStorage.getItem(`interviewgym_${userId}_interview_sessions`);
+    }
+    if (!local) {
+      local = localStorage.getItem('interviewgym_interview_sessions_v1');
+    }
     return local ? JSON.parse(local) : [];
   } catch {
     return [];

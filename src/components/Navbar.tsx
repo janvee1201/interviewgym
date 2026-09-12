@@ -36,7 +36,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   streakDays,
   onOpenSettings,
 }) => {
-  const { user, signOutUser, isAuthorized } = useAuth();
+  const { user, signOutUser } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
@@ -190,9 +190,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <div className="p-2 bg-stone-950 rounded-xl space-y-1">
                       <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-semibold">
                         <ShieldCheck className="w-3.5 h-3.5" />
-                        <span>Authorized Owner</span>
+                        <span>Personal Workspace</span>
                       </div>
-                      <p className="text-white font-medium truncate">{user.displayName || 'Authorized User'}</p>
+                      <p className="text-white font-medium truncate">{user.displayName || 'Personal Account'}</p>
                       <p className="text-stone-400 truncate text-[11px]">{user.email}</p>
                     </div>
 
@@ -358,7 +358,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <p className="text-stone-200 font-medium truncate text-[11px]">
                       {user.displayName || user.email}
                     </p>
-                    <p className="text-stone-500 truncate text-[10px]">Authorized User</p>
+                    <p className="text-stone-500 truncate text-[10px]">Personal Account</p>
                   </div>
                   <button
                     onClick={() => {

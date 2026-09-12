@@ -9,9 +9,6 @@ import {
 } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
 
-// Primary authorized personal user email from configuration / metadata
-export const AUTHORIZED_OWNER_EMAIL = 'j19897465@gmail.com';
-
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -28,24 +25,37 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function formatAuthError(err: any): string {
+  const code = err?.code || '';
+  switch (code) {
+    case 'auth/email-already-in-use':
+      return 'An account already exists with this email. Please sign in instead.';
+    case 'auth/invalid-email':
+      return 'Please provide a valid email address.';
+    case 'auth/weak-password':
+      return 'Password should be at least 6 characters long.';
+    case 'auth/user-not-found':
+      return 'No account was found with this email. Please register first.';
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential':
+      return 'Incorrect email or password. Please verify your credentials and try again.';
+    case 'auth/too-many-requests':
+      return 'Too many attempts. Please wait a few moments before trying again.';
+    case 'auth/network-request-failed':
+      return 'Network connection issue. Please check your internet connection.';
+    case 'auth/popup-closed-by-user':
+      return 'Google sign-in was cancelled.';
+    case 'auth/popup-blocked':
+      return 'Sign-in popup was blocked by browser. Please allow popups or use email sign-in.';
+    default:
+      return err?.message || 'Authentication error. Please try again.';
+  }
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [isGuest, setIsGuest] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem('interviewgym_guest_access') === 'true';
-    } catch {
-      return false;
-    }
-  });
-
-  const enterAsGuest = () => {
-    try {
-      localStorage.setItem('interviewgym_guest_access', 'true');
-    } catch {}
-    setIsGuest(true);
-  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -56,9 +66,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, []);
 
-  const isAuthorized = Boolean(
-    user && (!user.email || user.email.toLowerCase() === AUTHORIZED_OWNER_EMAIL.toLowerCase())
-  );
+  // Any authenticated user is fully authorized with their own isolated workspace
+  const isAuthorized = Boolean(user);
 
   const signInWithGoogle = async () => {
     setAuthError(null);
@@ -66,23 +75,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await signInWithPopup(auth, googleProvider);
     } catch (err: any) {
       console.error('Google Sign-In error:', err);
-      if (err.code === 'auth/popup-blocked') {
-        setAuthError('Sign-in popup was blocked by your browser. Please allow popups or use email sign-in.');
-      } else if (err.code === 'auth/popup-closed-by-user') {
-        setAuthError('Sign-in was cancelled.');
-      } else {
-        setAuthError(err.message || 'Failed to sign in with Google.');
-      }
+      setAuthError(formatAuthError(err));
     }
   };
 
   const signInWithEmail = async (email: string, pass: string) => {
     setAuthError(null);
     try {
-      await signInWithEmailAndPassword(auth, email, pass);
+      await signInWithEmailAndPassword(auth, email.trim(), pass);
     } catch (err: any) {
       console.error('Email sign-in error:', err);
-      setAuthError(err.message || 'Failed to sign in.');
+      setAuthError(formatAuthError(err));
       throw err;
     }
   };
@@ -90,20 +93,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUpWithEmail = async (email: string, pass: string) => {
     setAuthError(null);
     try {
-      await createUserWithEmailAndPassword(auth, email, pass);
+      await createUserWithEmailAndPassword(auth, email.trim(), pass);
     } catch (err: any) {
       console.error('Email sign-up error:', err);
-      setAuthError(err.message || 'Failed to register account.');
+      setAuthError(formatAuthError(err));
       throw err;
     }
   };
 
   const signOutUser = async () => {
     setAuthError(null);
-    try {
-      localStorage.removeItem('interviewgym_guest_access');
-    } catch {}
-    setIsGuest(false);
     try {
       await signOut(auth);
     } catch (err: any) {
@@ -119,8 +118,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         loading,
         isAuthorized,
-        isGuest,
-        enterAsGuest,
+        isGuest: false,
+        enterAsGuest: () => {},
         authError,
         signInWithGoogle,
         signInWithEmail,

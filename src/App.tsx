@@ -30,6 +30,7 @@ import {
   getExplainSessions,
   getInterviewSessions,
   syncUserDataWithFirestore,
+  DEFAULT_PROFILE,
 } from './lib/storage';
 
 const VALID_TABS: NavigationTab[] = [
@@ -70,10 +71,10 @@ function getInitialTab(): NavigationTab {
 }
 
 function AppContent() {
-  const { user, loading, isAuthorized, isGuest } = useAuth();
+  const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<NavigationTab>(getInitialTab);
-  const [profile, setProfile] = useState<UserPerformanceProfile>(getProfile());
-  const [dailyPlan, setDailyPlan] = useState<DailyPlan | null>(getDailyPlan());
+  const [profile, setProfile] = useState<UserPerformanceProfile>(() => getProfile(user?.uid));
+  const [dailyPlan, setDailyPlan] = useState<DailyPlan | null>(() => getDailyPlan(user?.uid));
   const [speakingSessions, setSpeakingSessions] = useState<SpeakingSessionRecord[]>([]);
   const [explainSessions, setExplainSessions] = useState<ExplainSessionRecord[]>([]);
   const [interviewSessions, setInterviewSessions] = useState<InterviewSession[]>([]);
@@ -124,19 +125,30 @@ function AppContent() {
   // Load user data when authenticated or tab changes
   useEffect(() => {
     if (user?.uid) {
+      // 1. Immediately read user-scoped local cache
+      setProfile(getProfile(user.uid));
+      setSpeakingSessions(getSpeakingSessions(user.uid));
+      setExplainSessions(getExplainSessions(user.uid));
+      setInterviewSessions(getInterviewSessions(user.uid));
+      setDailyPlan(getDailyPlan(user.uid));
+
+      // 2. Synchronize with Firestore for this user
       syncUserDataWithFirestore(user.uid).then((p) => {
         setProfile(p);
-        setSpeakingSessions(getSpeakingSessions());
-        setExplainSessions(getExplainSessions());
-        setInterviewSessions(getInterviewSessions());
+        setSpeakingSessions(getSpeakingSessions(user.uid));
+        setExplainSessions(getExplainSessions(user.uid));
+        setInterviewSessions(getInterviewSessions(user.uid));
+        setDailyPlan(getDailyPlan(user.uid));
       });
     } else {
-      setProfile(getProfile());
-      setSpeakingSessions(getSpeakingSessions());
-      setExplainSessions(getExplainSessions());
-      setInterviewSessions(getInterviewSessions());
+      // Cleared when signed out
+      setProfile(DEFAULT_PROFILE);
+      setSpeakingSessions([]);
+      setExplainSessions([]);
+      setInterviewSessions([]);
+      setDailyPlan(null);
     }
-  }, [user, activeTab]);
+  }, [user?.uid, activeTab]);
 
   const handleNavigate = (tab: NavigationTab, params?: Record<string, any>) => {
     if (tab === 'explain' && params?.topic) {
@@ -169,8 +181,8 @@ function AppContent() {
     );
   }
 
-  // Gate the application with AuthScreen if not authenticated or not authorized (unless in guest practice mode)
-  if ((!user && !isGuest) || (user && !isAuthorized)) {
+  // Gate the application with AuthScreen: authentication is mandatory for all users
+  if (!user) {
     return <AuthScreen />;
   }
 

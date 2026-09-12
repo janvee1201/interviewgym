@@ -1,7 +1,11 @@
 import { getProfile, getExplainSessions, getInterviewSessions, saveProfile } from './storage';
 import { TopicStatus, CurriculumTopic, AI_CURRICULUM_SECTIONS } from '../data/aiCurriculum';
+import { auth } from './firebase';
 
-const PROGRESS_STORAGE_KEY = 'interviewgym_topic_progress_v1';
+function getProgressKey(): string {
+  const uid = auth.currentUser?.uid;
+  return uid ? `interviewgym_${uid}_topic_progress_v1` : 'interviewgym_topic_progress_v1';
+}
 
 export interface TopicProgressMap {
   [topicTitle: string]: {
@@ -13,7 +17,20 @@ export interface TopicProgressMap {
 
 export function getLocalProgressMap(): TopicProgressMap {
   try {
-    const raw = localStorage.getItem(PROGRESS_STORAGE_KEY);
+    const key = getProgressKey();
+    let raw = localStorage.getItem(key);
+
+    // Fallback for previous local cache migration
+    if (!raw) {
+      const legacy = localStorage.getItem('interviewgym_topic_progress_v1');
+      if (legacy) {
+        raw = legacy;
+        try {
+          localStorage.setItem(key, legacy);
+        } catch {}
+      }
+    }
+
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
@@ -22,7 +39,8 @@ export function getLocalProgressMap(): TopicProgressMap {
 
 export function saveLocalProgressMap(map: TopicProgressMap): void {
   try {
-    localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(map));
+    const key = getProgressKey();
+    localStorage.setItem(key, JSON.stringify(map));
   } catch (err) {
     console.error('Failed to save topic progress map', err);
   }
