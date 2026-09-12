@@ -2,7 +2,7 @@
 
 ### AI-powered interview practice for students who know the concepts — but struggle to explain them.
 
-[Live Demo]([YOUR_DEPLOYED_LINK_HERE](https://interviewgym-ai.ai.studio)) · 
+[Live Demo]([[YOUR_DEPLOYED_LINK_HERE](https://interviewgym-ai.ai.studio)]) · 
 
 ---
 
