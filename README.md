@@ -1,97 +1,234 @@
-# 🧠 InterviewGym AI
+# InterviewGym AI
 
-<p align="center">
+### AI-powered interview practice for students who know the concepts — but struggle to explain them.
 
-### **You don't need more interview questions.**
-### **You need to get better at answering them.**
-
-An AI-powered interview training platform that helps you  
-**learn → speak → get evaluated → improve → repeat.**
-
-<br/>
-
-[🚀 **TRY INTERVIEWGYM AI**](YOUR_DEPLOYED_LINK_HERE)
-
-</p>
+[Live Demo]([YOUR_DEPLOYED_LINK_HERE](https://interviewgym-ai.ai.studio)) · 
 
 ---
 
-## 😵‍💫 "I know the answer... but when they ask me, I can't explain it."
+## The Problem
 
-We've all been there.
+Interview preparation is often treated as a knowledge problem.
 
-You study **OOP, DBMS, DSA, OS, CN, AI/ML, LLMs**...
+You study DSA.  
+You revise DBMS, OS and OOP.  
+You learn AI/ML concepts.  
+You solve coding problems.
 
-You solve questions.
+And yet, when an interviewer asks:
 
-You watch tutorials.
+> **"Can you explain this in your own words?"**
 
-You make notes.
+you may know the answer but struggle to communicate it clearly.
 
-And then an interviewer asks:
+You may hesitate, forget important points, speak too quickly, use filler words, or simply freeze when the interviewer asks a follow-up.
 
-> **"Explain it in your own words."**
-
-Suddenly your mind goes blank.
-
-Or you know the concept but:
-
-- ❌ Your explanation isn't structured
-- ❌ You forget important points
-- ❌ You use too many filler words
-- ❌ You speak too fast
-- ❌ You lack confidence
-- ❌ You understand it but can't communicate it
-- ❌ You don't know what the interviewer might ask next
-
-### That's the problem InterviewGym AI is built to solve.
+**InterviewGym AI was built around this gap between knowing something and being able to communicate it under pressure.**
 
 ---
 
-# 🎯 What is InterviewGym AI?
+## What is InterviewGym AI?
 
-**InterviewGym AI is your personal AI interview training ground.**
+InterviewGym AI is a personal AI-powered training platform for improving both **technical interview knowledge and communication skills**.
 
-Instead of passively consuming interview content, you **practice actually performing in an interview-like environment.**
+Instead of only giving you questions and answers, it creates a practice loop:
 
-It combines:
+**Learn → Explain → Get Feedback → Identify Weaknesses → Retry → Improve**
 
-> 📚 **Technical Learning**  
-> 🎤 **Speaking Practice**  
-> 🤖 **AI Evaluation**  
-> 🎯 **Interview Simulation**  
-> 📊 **Progress Tracking**
+The idea is simple: interview skills improve through repeated practice, not just passive preparation.
 
-into one platform.
-
-Think of it as a **gym for your interview skills**.
-
-You don't become stronger by reading about exercise.
-
-You train.
-
-**Interviews work the same way.**
+**[Try InterviewGym AI →](YOUR_DEPLOYED_LINK_HERE)**
 
 ---
 
-# ⚡ The Core Loop
+## Core Features
+
+### Learn a Topic
+
+A structured learning environment covering the subjects most relevant to software and AI interviews.
+
+**AI & GenAI**
+- Artificial Intelligence
+- Machine Learning
+- Deep Learning
+- NLP
+- Large Language Models
+- Generative AI
+- RAG & Knowledge Systems
+- Fine-tuning & Model Adaptation
+- Agentic AI
+- Model Context Protocol (MCP)
+- AI Engineering / Production
+- Multimodal AI
+
+**Computer Science Fundamentals**
+- Data Structures & Algorithms
+- Object-Oriented Programming
+- Database Management Systems
+- Operating Systems
+- Computer Networks
+
+Topics are organized progressively from **Beginner → Intermediate → Interview** level.
+
+---
+
+### Learn → Explain
+
+The core learning loop of InterviewGym.
+
+After learning a topic, you are asked to explain it yourself instead of immediately moving to the next chapter.
+
+The AI evaluates your response across areas such as:
+
+- Technical correctness
+- Missing concepts
+- Explanation structure
+- Clarity
+- Fluency
+- Confidence
+- Speaking pace
+- Filler words
+
+You can then retry the explanation and compare your performance.
+
+This turns learning from:
+
+`Read → Remember`
+
+into:
+
+`Learn → Recall → Explain → Receive Feedback → Improve`
+
+---
+
+### Interview Simulator
+
+Practice conversations that feel closer to an actual interview.
+
+Interview sessions can cover:
+
+- DSA
+- Java
+- Python
+- OOP
+- DBMS
+- Operating Systems
+- Computer Networks
+- AI / ML
+- Generative AI
+- LLMs
+- Projects
+- HR & behavioral questions
+
+The simulator can also introduce follow-up questions, helping you practice the part of interviews that often causes the most pressure:
+
+**"Why?" · "How?" · "What happens internally?" · "Give me an example."**
+
+---
+
+### Random Speaking
+
+Build the ability to think and speak without preparing a perfect answer beforehand.
+
+Practice with technical, non-technical, situational, opinion-based and abstract topics.
+
+The goal is not memorizing a script.
+
+It is learning to **organize your thoughts and communicate them naturally.**
+
+---
+
+### 5-Minute Drill
+
+Short, focused practice sessions for days when you don't have an hour to study.
+
+Use it for quick revision, speaking practice, or a short interview warm-up.
+
+Consistency matters more than session length.
+
+---
+
+### Debate Mode
+
+Practice expressing and defending an opinion while responding to counterarguments.
+
+It focuses on:
+
+- Structured thinking
+- Argument building
+- Clarity
+- Confidence
+- Spontaneous responses
+
+Useful for interviews, group discussions and real-world communication.
+
+---
+
+### AI Tools & Model Landscape
+
+A practical overview of the rapidly evolving AI ecosystem.
+
+Explore important categories such as:
+
+- Major AI models
+- AI coding tools
+- AI agent ecosystems
+- MCP and tool calling
+- Generative AI tools
+- Multimodal systems
+- AI infrastructure and developer platforms
+
+The focus is on understanding **what a tool/model is, what it is used for, why it matters, and what an engineer should know about it** — rather than turning interview preparation into a stream of AI news.
+
+---
+
+### Progress Analytics
+
+Practice becomes more useful when improvement can be measured.
+
+InterviewGym keeps track of user-specific progress such as:
+
+- Learning progress
+- Practice sessions
+- Scores
+- Speaking performance
+- Weak areas
+- Session history
+- Practice streaks
+
+This helps answer a more useful question than:
+
+> "Am I preparing enough?"
+
+Instead:
+
+> **"What am I improving at, and what should I work on next?"**
+
+---
+
+## How It Works
 
 ```text
-             📚 LEARN
-                │
-                ▼
-          🎤 EXPLAIN IT
-                │
-                ▼
-         🤖 AI EVALUATES
-                │
-                ▼
-        🔍 FIND WEAK AREAS
-                │
-                ▼
-             🔄 RETRY
-                │
-                ▼
-          📈 TRACK GROWTH
-                │
-                └──────────────► Repeat
+                    InterviewGym AI
+                          │
+            ┌─────────────┼─────────────┐
+            │             │             │
+          Learn         Speak       Interview
+            │             │             │
+            └─────────────┼─────────────┘
+                          │
+                     Gemini AI
+                          │
+                 Evaluate Response
+                          │
+              ┌───────────┴───────────┐
+              │                       │
+        Identify Weakness        Give Feedback
+              │                       │
+              └───────────┬───────────┘
+                          │
+                        Retry
+                          │
+                       Improve
+                          │
+                    Track Progress
