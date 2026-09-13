@@ -232,4 +232,5 @@ Instead:
                        Improve
                           │
                     Track Progress
-
+```
+Download the app and Enjoy Learning!
